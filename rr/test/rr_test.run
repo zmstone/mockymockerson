@@ -13,7 +13,7 @@ main(_Args) ->
         up_to_date ->
             do_nothing
     end,
-    TestCase = [escript:script_name()],
+    TestCase = escript:script_name(),
     case rr_test:run() of
         ok ->
             io:format("~p all pass!~n", [TestCase]);

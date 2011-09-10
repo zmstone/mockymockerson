@@ -8,6 +8,7 @@
 
 %% -----------------------------------------------------------------------------
 %% read record by specifying the module name or the source code file path name
+%% or the beam file path name
 %% -----------------------------------------------------------------------------
 run(ModuleOrFile) ->
     run_help(ModuleOrFile, []).
