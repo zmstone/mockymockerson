@@ -1,4 +1,5 @@
 
 rr: find records from beam (with 'debug_info' compile option) or source code.
-em: enhanced match --- match into the specific list/tuple/record element till atomic
+em: enhanced match - match into the specific list/tuple/record element till atomic
+mok: mockymockerson - mock (aka stub) module:function/arity
 

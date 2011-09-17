@@ -1,24 +1,39 @@
 
 -module(mymatch).
 
--export([run/4]).
+-export([run/4,
+         match/2
+         ]).
 
--define(match, '$MY_MATCH').
--define(mismatch, '$MY_MISMATCH').
+-define(match, '$MY_MATCH_MATCHED').
+-define(ignore, '$MY_MATCH_IGNORE').
+-define(mismatch, '$MY_MATCH_MISMATCH').
 
 -include("mymatch.hrl").
 
 %% -----------------------------------------------------------------------------
 %% -----------------------------------------------------------------------------
 run(Module, Line, ExpectedValue, RealValue) ->
-    case ExpectedValue == RealValue of
+    case match(ExpectedValue, RealValue) of
         true ->
-            ?match;
-        false ->
+            true;
+        Format ->
             fp("Match failed at line ~p~n", [Line]),
-            Format = format_match(ExpectedValue, RealValue),
             print_match_format(Module, Format),
-            exit(my_match_failure)
+            throw(Format)
+    end.
+
+%% -----------------------------------------------------------------------------
+%% -----------------------------------------------------------------------------
+match(ExpectedValue, ExpectedValue) ->
+    true;
+match(ExpectedValue, RealValue) ->
+    Format = format_match(ExpectedValue, RealValue),
+    case all_match(Format) of
+        true ->
+            true;
+        false ->
+            Format
     end.
 
 %% -----------------------------------------------------------------------------
@@ -43,7 +58,12 @@ format_atomic_match(A, B) ->
         true ->
             {?match, A};
         false ->
-            {?mismatch, A, B}
+            case is_atom(A) andalso hd(atom_to_list(A)) == $_ of
+                true ->
+                    {?ignore, A, B};
+                false ->
+                    {?mismatch, A, B}
+            end
     end.
 
 %% -----------------------------------------------------------------------------
@@ -73,8 +93,21 @@ format_tuple_match(A, B) ->
 
 %% -----------------------------------------------------------------------------
 %% -----------------------------------------------------------------------------
+all_match({?mismatch, _A, _B}) ->
+    false;
+all_match({?ignore, _A, _B}) ->
+    true;
+all_match({?match, _V}) ->
+    true;
+all_match(Tuple) when is_tuple(Tuple) ->
+    all_match(tuple_to_list(Tuple));
+all_match(List) when is_list(List) ->
+    lists:all(fun(E) -> all_match(E) end, List).
+
+%% -----------------------------------------------------------------------------
+%% -----------------------------------------------------------------------------
 print_match_format(Module, Format) ->
-    Records = caes rr:run(Module) of
+    Records = case catch rr:run(Module) of
         RecordList when is_list(RecordList) ->
             RecordList;
         _ ->
@@ -86,6 +119,8 @@ print_match_format(Module, Format) ->
 %% -----------------------------------------------------------------------------
 print_match_format(_Records, Indention, Tag, {?match, V}) ->
     fp("~s~s~n", [make_indented_tag(Indention, Tag), term2string(V)]);
+print_match_format(_Records, Indention, Tag, {?ignore, E, _V}) ->
+    fp("~s~s~n", [make_indented_tag(Indention, Tag), term2string(E)]);
 print_match_format(_Records, Indention, Tag, {?mismatch, V1, V2}) ->
     Indention_Tag = make_indented_tag(Indention, Tag),
     Padding = [$\s || _ <- Indention_Tag],
@@ -200,7 +235,7 @@ term2string(T) ->
 %% formated print
 %% -----------------------------------------------------------------------------
 fp(String) ->
-    io:put_chars(String),
+    % io:put_chars(String),
     io:put_chars(standard_error, String).
 
 fp(FormatStr, ArgList) ->
