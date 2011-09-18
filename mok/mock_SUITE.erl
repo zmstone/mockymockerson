@@ -13,8 +13,7 @@ all() -> [
 
 %%% ----------------------------------------------------------------------------
 %%% ----------------------------------------------------------------------------
-ts_arity_result(suite) ->
-    [
+ts_arity_result(suite) -> [
     ?ct(t_arity_result_normal),
     ?ct(t_arity_result_twice),
     ?ct(t_arity_result_3_times),
@@ -64,12 +63,13 @@ t_arity_result_too_many_invokes(exec) ->
 
 %%% ----------------------------------------------------------------------------
 %%% ----------------------------------------------------------------------------
-ts_args_result(suite) ->
-    [
+ts_args_result(suite) -> [
     ?ct(t_args_result_normal),
     ?ct(t_args_result_batch)
     ].
 
+%%% ----------------------------------------------------------------------------
+%%% ----------------------------------------------------------------------------
 t_args_result_normal(exec) ->
     ?mock(mymod, myfun, {['_whatever'], ok}),
     ?mock(mymod, myfun, {[must_match], cool}),
@@ -77,6 +77,8 @@ t_args_result_normal(exec) ->
     cool = mymod:myfun(must_match),
     ok.
 
+%%% ----------------------------------------------------------------------------
+%%% ----------------------------------------------------------------------------
 t_args_result_batch(exec) ->
     ?mock(mymod, myfun, [{[whatever], ok},
                          {[whatsoever], cool},
@@ -114,7 +116,7 @@ t_mocking_fun_undef(exec) ->
     ?mock(mymod, myfun, Fun),
     ok = mymod:myfun(whatever),
     try mymod:myfun(whatever, crap) of
-        Result ->
+        _Result ->
             nok
     catch
         error:undef ->
