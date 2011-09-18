@@ -37,12 +37,11 @@ call(#mock_call{mfa = Mfa, realArgs = RealArgs}) ->
 %%% ----------------------------------------------------------------------------
 %%% ----------------------------------------------------------------------------
 call_mocker(#mock{mocker = Mocker} = Mock, RealArgs) when is_function(Mocker) ->
-    try apply(Mocker, RealArgs) of
+    case catch apply(Mocker, RealArgs) of
+        {'EXIT', Reason} ->
+            throw(?excep({"Mocker function crashed", Reason}));
         Result ->
             Result
-    catch
-        X:Y ->
-            throw(?excep({"Mocker function crashed", X, Y, Mock}))
     end;
 call_mocker(#mock{expArgs = ExpArgs} = Mock, RealArgs) when is_list(ExpArgs) ->
     case mymatch:match(ExpArgs, RealArgs) of

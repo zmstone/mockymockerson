@@ -5,7 +5,8 @@
 -define(undef, undefined).
 -define(SERVER, mockymockerson).
 
--define(excep(Detail), {mockymockerson_exception, Detail}).
+-define(exception, '$MOCKYMOCKERSON_EXCEPTION').
+-define(excep(Detail), {?exception, Detail}).
 
 %% a mocker of module:function/arity
 -record(mock, {

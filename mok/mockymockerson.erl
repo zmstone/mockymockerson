@@ -79,5 +79,10 @@ mock(#mock{} = Mock) ->
 call(Module, Function, ArgList) ->
     MockCall = #mock_call{mfa = {Module, Function, length(ArgList)},
                           realArgs = ArgList},
-    gen_server:call(?SERVER, MockCall).
+    case gen_server:call(?SERVER, MockCall) of
+        {?exception, Exception} ->
+            throw(Exception);
+        ReturnValue ->
+            ReturnValue
+    end.
 
