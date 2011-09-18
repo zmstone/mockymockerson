@@ -2,12 +2,10 @@
 -ifndef(MOCKYMOCKERSON_PRIVATE_HRL_).
 -define(MOCKYMOCKERSON_PRIVATE_HRL_, true).
 
--include("mockymockerson.hrl").
-
 -define(undef, undefined).
 -define(SERVER, mockymockerson).
 
--define(excep(Detail), {?exception, Detail}).
+-define(excep(Detail), {mockymockerson_exception, Detail}).
 
 %% a mocker of module:function/arity
 -record(mock, {

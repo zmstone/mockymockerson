@@ -5,6 +5,7 @@
     start/0,
     stop/0,
     mock/5,
+    mock_n/6,
     call/3
         ]).
 
@@ -53,6 +54,14 @@ mock(TestMod, Line, Module, Function, MockerFun)
 
 mock(_TestMod, _Line, _Module, _Function, Whatever) ->
     throw({bad_mocking_arg, Whatever}).
+
+%%% ----------------------------------------------------------------------------
+%%% ----------------------------------------------------------------------------
+mock_n(0, _TestMod, _Line, _Module, _Function, _Whatever) ->
+    ok;
+mock_n(N, TestMod, Line, Module, Function, Whatever) ->
+    mock(TestMod, Line, Module, Function, Whatever),
+    mock_n(N-1, TestMod, Line, Module, Function, Whatever).
 
 %%% ----------------------------------------------------------------------------
 %%% ----------------------------------------------------------------------------
