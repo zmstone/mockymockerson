@@ -8,7 +8,8 @@
 all() -> [
     ?ct(ts_arity_result),
     ?ct(ts_args_result),
-    ?ct(ts_mocking_fun)
+    ?ct(ts_mocking_fun),
+    ?ct(ts_mocking_error)
     ].
 
 %%% ----------------------------------------------------------------------------
@@ -120,6 +121,23 @@ t_mocking_fun_undef(exec) ->
             nok
     catch
         error:undef ->
+            ok
+    end.
+
+%%% ----------------------------------------------------------------------------
+%%% ----------------------------------------------------------------------------
+ts_mocking_error(suite) -> [
+    ?ct(t_mocking_error_loaded_module)
+    ].
+
+%%% ----------------------------------------------------------------------------
+%%% ----------------------------------------------------------------------------
+t_mocking_error_loaded_module(exec) ->
+    try ?mock(mockymockerson, whatever_function, whatever_arity) of
+        _Result ->
+            nok
+    catch
+        throw:_Reason ->
             ok
     end.
 

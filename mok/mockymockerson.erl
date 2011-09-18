@@ -65,7 +65,17 @@ mock_n(N, TestMod, Line, Module, Function, Whatever) ->
 
 %%% ----------------------------------------------------------------------------
 %%% ----------------------------------------------------------------------------
-mock(#mock{} = Mock) ->
+mock(#mock{mfa = {Module, _F, _A}} = Mock) ->
+    case code:which(Module) of
+        non_existing ->
+            mock_help(Mock);
+        _ ->
+            throw("Can not mock loaded module")
+    end.
+
+%%% ----------------------------------------------------------------------------
+%%% ----------------------------------------------------------------------------
+mock_help(Mock) ->
     case gen_server:call(?SERVER, Mock) of
         ok ->
             ok;
