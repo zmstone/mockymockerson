@@ -99,7 +99,7 @@ ts_mocking_fun(suite) ->
 t_mocking_fun_normal(exec) ->
     Fun = fun(whatever) -> ok;
              (whatsoever) -> cool;
-             (_) -> {ok, "$don't match this one"}
+             (_) -> crash:crash(), {ok, "$don't match this one"}
           end,
     ?mock_n(3, mymod, myfun, Fun),
     ?match(ok, mymod:myfun(whatever)),

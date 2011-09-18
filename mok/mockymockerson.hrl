@@ -42,13 +42,13 @@ run([CaseFun | Rest]) ->
 exec(CaseFun) ->
     Case = CaseFun(name),
     mockymockerson:start(),
-    io:format("testing: ~p ...", [Case]),
+    io:format("testing: ~p ... ", [Case]),
     case catch CaseFun(exec) of
         ok ->
-            io:format(" ok\n"),
+            io:format("ok\n"),
             ok;
         Reason ->
-            io:format(" failed\n"),
+            io:format("failed\n"),
             io:format("~p~n", [Reason]),
             nok
     end,
