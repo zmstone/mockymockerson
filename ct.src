@@ -1,7 +1,8 @@
 #!/usr/bin/env escript
 
 main(_Args) ->
-    CompileOptions = [debug_info, {i, "."}],
+    CompileOptions = [debug_info, {i, "MOCKYMOCKERSON_INCLUDE_PATH"}],
+    code:add_path("MOCKYMOCKERSON_EBIN_PATH"),
     %% io:format("compiling with options: ~p\n", [CompileOptions]),
     case make:all([load | CompileOptions]) of
         up_to_date ->
@@ -14,7 +15,7 @@ start_ct() ->
     Files = filelib:wildcard("*_SUITE.beam", "."),
     case [list_to_atom(filename:basename(FileName, ".beam")) || FileName <- Files] of
         [] ->
-            io:format("No ct SUITE found!\n");
+            io:format("No CT SUITE file *_SUITE.erl found!\n");
         Modules ->
             lists:foreach(fun(Module) -> Module:run() end, Modules)
     end.

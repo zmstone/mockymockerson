@@ -18,28 +18,27 @@
 -define(ct(CASE), fun(name) -> CASE;
                      (Other) -> CASE(Other) end).
 -export([
-    run/0,
-    run/1,
-    all/0
+    __run__/0,
+    __run__/1
         ]).
 
-run() ->
-    run(all()).
+__run__() ->
+    __run__(all()).
 
-run([]) ->
+__run__([]) ->
     ok;
-run(Case) when is_atom(Case) ->
+__run__(Case) when is_atom(Case) ->
     run([Case]);
-run([CaseFun | Rest]) ->
+__run__([CaseFun | Rest]) ->
     case catch CaseFun(suite) of
         SubCaseList when is_list(SubCaseList) andalso SubCaseList /= [] ->
-            run(SubCaseList);
+            __run__(SubCaseList);
         _ ->
-            exec(CaseFun)
+            __exec__(CaseFun)
     end,
-    run(Rest).
+    __run__(Rest).
 
-exec(CaseFun) ->
+__exec__(CaseFun) ->
     Case = CaseFun(name),
     mockymockerson:start(),
     io:format("testing: ~p ... ", [Case]),
