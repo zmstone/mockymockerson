@@ -17,6 +17,6 @@ start_ct() ->
         [] ->
             io:format("No CT SUITE file *_SUITE.erl found!\n");
         Modules ->
-            lists:foreach(fun(Module) -> Module:run() end, Modules)
+            lists:foreach(fun(Module) -> Module:'__run__'() end, Modules)
     end.
 
