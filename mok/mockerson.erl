@@ -36,7 +36,7 @@ call(#mock_call{mfa = Mfa, realArgs = RealArgs}) ->
 
 %%% ----------------------------------------------------------------------------
 %%% ----------------------------------------------------------------------------
-call_mocker(#mock{mocker = Mocker} = Mock, RealArgs) when is_function(Mocker) ->
+call_mocker(#mock{mocker = Mocker}, RealArgs) when is_function(Mocker) ->
     case catch apply(Mocker, RealArgs) of
         {'EXIT', Reason} ->
             throw(?excep({"Mocker function crashed", Reason}));

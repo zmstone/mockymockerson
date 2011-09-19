@@ -1,5 +1,6 @@
 #!/usr/bin/env escript
 
 main(_Args) ->
-    io:format("hello world!\n").
+    os:cmd("rm ebin/*.beam"),
+    make:all().
 

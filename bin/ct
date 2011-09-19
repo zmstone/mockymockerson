@@ -19,8 +19,6 @@ start_ct() ->
     lists:foreach(fun(Module) -> Module:run() end, Modules),
     ok.
 
-fp(Str) ->
-    io:format(Str).
 fp(FmtStr, Args) ->
     io:format(FmtStr, Args).
 
