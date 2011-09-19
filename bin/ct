@@ -1,9 +1,8 @@
 #!/usr/bin/env escript
 
 main(_Args) ->
-    code:add_path("ebin"),
     CompileOptions = [debug_info, {i, "."}],
-    fp("compiling with options: ~p\n", [CompileOptions]),
+    %% io:format("compiling with options: ~p\n", [CompileOptions]),
     case make:all([load | CompileOptions]) of
         up_to_date ->
             start_ct();
@@ -13,12 +12,10 @@ main(_Args) ->
 
 start_ct() ->
     Files = filelib:wildcard("*_SUITE.beam", "."),
-    Modules = [list_to_atom(filename:basename(FileName, ".beam"))
-                || FileName <- Files],
-
-    lists:foreach(fun(Module) -> Module:run() end, Modules),
-    ok.
-
-fp(FmtStr, Args) ->
-    io:format(FmtStr, Args).
+    case [list_to_atom(filename:basename(FileName, ".beam")) || FileName <- Files] of
+        [] ->
+            io:format("No ct SUITE found!\n");
+        Modules ->
+            lists:foreach(fun(Module) -> Module:run() end, Modules)
+    end.
 
