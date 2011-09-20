@@ -6,7 +6,8 @@
     stop/0,
     mock/5,
     mock_n/6,
-    call/3
+    call/3,
+    run/1
         ]).
 
 -include("mockymockerson_private.hrl").
@@ -89,10 +90,50 @@ mock_help(Mock) ->
 call(Module, Function, ArgList) ->
     MockCall = #mock_call{mfa = {Module, Function, length(ArgList)},
                           realArgs = ArgList},
+    mok_break:pause(MockCall),
     case gen_server:call(?SERVER, MockCall) of
         {?exception, Exception} ->
             throw(Exception);
         ReturnValue ->
             ReturnValue
     end.
+
+%%% ----------------------------------------------------------------------------
+%%% ----------------------------------------------------------------------------
+run(Module) when is_atom(Module) ->
+    run_case(Module:all()).
+
+%%% ----------------------------------------------------------------------------
+%%% ----------------------------------------------------------------------------
+run_case([]) -> ok;
+run_case([{CaseName, CaseFun} | Rest]) ->
+    case catch CaseFun(suite) of
+        SubCaseList when is_list(SubCaseList) andalso SubCaseList /= [] ->
+            run_case(SubCaseList);
+        _ ->
+            exec_case(CaseName, CaseFun)
+    end,
+    run_case(Rest).
+
+%%% ----------------------------------------------------------------------------
+%%% ----------------------------------------------------------------------------
+exec_case(CaseName, CaseFun) ->
+    start(),
+    fp("testing: ~p ... ", [CaseName]),
+    Result = case catch CaseFun(exec) of
+        ok ->
+            fp("ok\n"),
+            ok;
+        Reason ->
+            fp("failed\n"),
+            fp("~p~n", [Reason]),
+            nok
+    end,
+    stop(),
+    Result.
+
+%%% ----------------------------------------------------------------------------
+%%% ----------------------------------------------------------------------------
+fp(Str) -> io:put_chars(Str).
+fp(FmtStr, Args) -> io:put_chars(io_lib:format(FmtStr, Args)).
 

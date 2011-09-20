@@ -1,6 +1,7 @@
 #!/usr/bin/env escript
 
-main(_Args) ->
+main(RawArgs) ->
+    parse_args(RawArgs),
     CompileOptions = [debug_info, {i, "MOCKYMOCKERSON_INCLUDE_PATH"}],
     code:add_path("MOCKYMOCKERSON_EBIN_PATH"),
     %% io:format("compiling with options: ~p\n", [CompileOptions]),
@@ -17,6 +18,17 @@ start_ct() ->
         [] ->
             io:format("No CT SUITE file *_SUITE.erl found!\n");
         Modules ->
-            lists:foreach(fun(Module) -> Module:'__run__'() end, Modules)
+            [mockymockerson:run(Mod) || Mod <- Modules]
     end.
+
+parse_args([]) ->
+    ok;
+parse_args([Arg | Rest]) ->
+    case Arg of
+        [$- | Option] ->
+            put(list_to_atom(Option), true);
+        _ ->
+            do_nothing
+    end,
+    parse_args(Rest).
 

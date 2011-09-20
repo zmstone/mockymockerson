@@ -10,7 +10,9 @@ main(_Args) ->
     CtDst = filename:join([Dir, "bin/ct"]),
     replace(Dir, CtSrc, CtDst),
     os:cmd("chmod 755 " ++ CtDst),
-    make:all().
+    file:set_cwd(Dir),
+    make:all(),
+    io:format("done!\n").
 
 replace(Dir, Src, Dst) ->
     {ok, IoSrc} = file:open(Src, [raw, read]),
