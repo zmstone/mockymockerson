@@ -1,3 +1,3 @@
 
-{['em/*', 'rr/*', 'mok/*'], [{outdir, "ebin"}]}.
+{['em/*', 'mok/*'], [{outdir, "ebin"}]}.
 
