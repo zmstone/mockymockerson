@@ -1,226 +1,197 @@
 
 -module(mymatch).
 
--export([run/4,
-         match/2
-         ]).
+-export([run/5,
+         print/2,
+         parse_transform/2]).
 
--define(match, '$MY_MATCH_MATCHED').
--define(ignore, '$MY_MATCH_IGNORE').
--define(mismatch, '$MY_MATCH_MISMATCH').
+-define(rec_fields, '$MYMATCH_RECORD_FIELDS').
 
--include("mymatch.hrl").
-
-%% -----------------------------------------------------------------------------
-%% -----------------------------------------------------------------------------
-run(Module, Line, ExpectedValue, RealValue) ->
-    case match(ExpectedValue, RealValue) of
-        true ->
-            true;
-        Format ->
-            fp("Match failed at line ~p~n", [Line]),
-            print_match_format(Module, Format),
-            throw(Format)
-    end.
+-define(undef, undefined).
+-define(ind_width, 4).
 
 %% -----------------------------------------------------------------------------
+%% run(Module, Line, Exp, Got, Options) -> Format
+%%
+%% Options = [{print, raw | all | lite} | ...]
+%% Format  = {Tag, Type, Var}
+%% Type    = record | tuple | list | value | mismatch,
+%% Var     = {RecordName, Format} | -- when Type == record
+%%           Format               | -- when Type == tuple | list
+%%           Exp                  | -- when Type == value & Exp == Got
+%%           {Exp, Got}           | -- when Type == mismatch & Exp /= Got
 %% -----------------------------------------------------------------------------
-match(ExpectedValue, ExpectedValue) ->
-    true;
-match(ExpectedValue, RealValue) ->
-    Format = format_match(ExpectedValue, RealValue),
-    case all_match(Format) of
-        true ->
-            true;
-        false ->
-            Format
-    end.
+run(_Module, _Line, Value, Value, _Options) ->
+    ok;
+run(Module, Line, ExpectedValue, RealValue, Options) ->
+    Format = format_match(Module, details, ExpectedValue, RealValue),
+    Result = {Module, Line, Format},
+    case [Opt || {print, Opt} <- Options] of
+        [] ->
+            do_nothing;
+        PrintOptions ->
+            print(Result, PrintOptions)
+    end,
+    throw({?MODULE, Result}).
 
 %% -----------------------------------------------------------------------------
+%% print format
+%% Options = [raw | all | lite]
 %% -----------------------------------------------------------------------------
-format_match(A, B)
+print({Module, Line, Format}, Options) ->
+    fp("Match failed in module '~p' at line ~p:~n", [Module, Line]),
+    print_match_format(Format, Options).
+
+%% -----------------------------------------------------------------------------
+%% format match status of each element
+%% -----------------------------------------------------------------------------
+format_match(Mod, Tag, A, B)
   when is_list(A),
-       is_list(B),
-       length(A) == length(B) ->
-    format_list_match(A, B);
-format_match(A, B)
+       is_list(B) ->
+    format_list_match(Mod, Tag, A, B);
+format_match(Mod, Tag, A, B)
   when is_tuple(A),
-       is_tuple(B),
-       tuple_size(A) == tuple_size(B) ->
-    format_tuple_match(A, B);
-format_match(A, B) ->
-    format_atomic_match(A, B).
+       is_tuple(B) ->
+    format_tuple_match(Mod, Tag, A, B);
+format_match(_Mod, Tag, A, B) ->
+    format_atomic_match(Tag, A, B).
 
 %% -----------------------------------------------------------------------------
+%% format atomic match
 %% -----------------------------------------------------------------------------
-format_atomic_match(A, B) ->
+format_atomic_match(Tag, A, B) ->
     case A == B of
         true ->
-            {?match, A};
+            {Tag, value, match, A};
         false ->
-            case is_atom(A) andalso hd(atom_to_list(A)) == $_ of
-                true ->
-                    {?ignore, A, B};
-                false ->
-                    {?mismatch, A, B}
-            end
+            {Tag, value, mismatch, {A, B}}
     end.
 
 %% -----------------------------------------------------------------------------
+%% match_Result(A, B) -> match | mismatch
 %% -----------------------------------------------------------------------------
-format_list_match(A, B) ->
+match_result(A, A) -> match;
+match_result(_, _) -> mismatch.
+
+%% -----------------------------------------------------------------------------
+%% format list match
+%% -----------------------------------------------------------------------------
+format_list_match(Mod, Tag, A, B) ->
     case is_printable(A) andalso is_printable(B) of
         true ->
-            format_atomic_match(A, B);
+            format_atomic_match(Tag, A, B);
         false ->
-            format_list_match_loop(A, B, [])
+            Tags = lists:seq(1, length(A)),
+            Sub = format_list_match_loop(Mod, Tags, A, B),
+            {Tag, list, match_result(A, B), Sub}
     end.
 
-%% -----------------------------------------------------------------------------
-%% -----------------------------------------------------------------------------
-format_list_match_loop([], [], Result) ->
-    lists:reverse(Result);
-format_list_match_loop([H1 | T1], [H2 | T2], Result) ->
-    format_list_match_loop(T1, T2, [format_match(H1, H2) | Result]).
-
-%% -----------------------------------------------------------------------------
-%% -----------------------------------------------------------------------------
-format_tuple_match(A, B) ->
-    LA = tuple_to_list(A),
-    LB = tuple_to_list(B),
-    Result = format_list_match_loop(LA, LB, []),
-    list_to_tuple(Result).
-
-%% -----------------------------------------------------------------------------
-%% -----------------------------------------------------------------------------
-all_match({?mismatch, _A, _B}) ->
-    false;
-all_match({?ignore, _A, _B}) ->
-    true;
-all_match({?match, _V}) ->
-    true;
-all_match(Tuple) when is_tuple(Tuple) ->
-    all_match(tuple_to_list(Tuple));
-all_match(List) when is_list(List) ->
-    lists:all(fun(E) -> all_match(E) end, List).
-
-%% -----------------------------------------------------------------------------
-%% -----------------------------------------------------------------------------
-print_match_format(Module, Format) ->
-    Records = case catch rr:run(Module) of
-        RecordList when is_list(RecordList) ->
-            RecordList;
-        _ ->
-            []
-    end,
-    print_match_format(Records, 0, [], Format).
-
-%% -----------------------------------------------------------------------------
-%% -----------------------------------------------------------------------------
-print_match_format(_Records, Indention, Tag, {?match, V}) ->
-    fp("~s~s~n", [make_indented_tag(Indention, Tag), term2string(V)]);
-print_match_format(_Records, Indention, Tag, {?ignore, E, _V}) ->
-    fp("~s~s~n", [make_indented_tag(Indention, Tag), term2string(E)]);
-print_match_format(_Records, Indention, Tag, {?mismatch, V1, V2}) ->
-    Indention_Tag = make_indented_tag(Indention, Tag),
-    Padding = [$\s || _ <- Indention_Tag],
-    fp("~sEXPECTED = ~s~n", [Indention_Tag, term2string(V1)]),
-    fp("~sREAL VAL = ~s~n", [Padding,        term2string(V2)]);
-print_match_format(Records, Indention, Tag, L) when is_list(L) ->
-    print_list_match_format(Records, Indention, Tag, L);
-print_match_format(Records, Indention, Tag, T) when is_tuple(T) ->
-    print_tuple_match_format(Records, Indention, Tag, T).
-
-%% -----------------------------------------------------------------------------
-%% -----------------------------------------------------------------------------
-print_list_match_format(Records, Indention, Tag, L) ->
-    fp("~s[...]~n", [make_indented_tag(Indention, Tag)]),
-    TagList = make_list_tag_list(length(L)),
-    print_list_match_format_loop(Records, Indention + 1, ew(TagList), L).
-
-%% -----------------------------------------------------------------------------
-%% -----------------------------------------------------------------------------
-print_tuple_match_format(Records, Indention, Tag, T) ->
-    L = tuple_to_list(T),
-    Indention_Tag = make_indented_tag(Indention, Tag),
-    case make_tuple_tag_list(Records, T) of
-        {list, TagList} ->
-            fp("~s{...}~n", [Indention_Tag]),
-            print_list_match_format_loop(Records, Indention+1, ew(TagList), L);
-        {tuple, [RecordTag | TagList]} ->
-            fp("~s#~s{...}~n", [Indention_Tag, RecordTag]),
-            [_ | R] = L,
-            print_list_match_format_loop(Records, Indention+1, ew(TagList), R)
-    end.
-
-%% -----------------------------------------------------------------------------
-%% -----------------------------------------------------------------------------
-print_list_match_format_loop(_Records, _Indention, _TagList, []) ->
-    ok;
-print_list_match_format_loop(Records, Indention, [Tag | RestTags], [H | T]) ->
-    print_match_format(Records, Indention, Tag, H),
-    print_list_match_format_loop(Records, Indention, RestTags, T).
-
-%% -----------------------------------------------------------------------------
-%% -----------------------------------------------------------------------------
-make_tuple_tag_list(Records, T) when is_tuple(T) ->
-    make_tuple_tag_list(Records, tuple_to_list(T));
-make_tuple_tag_list(Records, [{?match, Tag} | FieldValues]) when is_atom(Tag) ->
-    case get_record_definition(Records, Tag) of
-        undefined ->
-            {list, make_list_tag_list(length(FieldValues) + 1)};
-        FieldTags ->
-            {tuple, [term2string(E) || E <- [Tag | FieldTags]]}
-    end;
-make_tuple_tag_list(_Records, L) when is_list(L) ->
-    {list, make_list_tag_list(length(L))}.
-
-%% -----------------------------------------------------------------------------
-%% -----------------------------------------------------------------------------
-get_record_definition(Records, Tag) ->
-    case lists:keysearch(Tag, 1, Records) of
-        {value, {Tag, Fields}} ->
-            Fields;
-        false ->
-            undefined
-    end.
-
-%% -----------------------------------------------------------------------------
-%% -----------------------------------------------------------------------------
-make_list_tag_list(N) ->
-    IntegerList = lists:seq(1, N),
-    [term2string(I) || I <- IntegerList].
-
-%% -----------------------------------------------------------------------------
-%% -----------------------------------------------------------------------------
-make_indented_tag(0, _Tag) ->
+format_list_match_loop(_Mod, _Tags, [], []) ->
     [];
-make_indented_tag(Indention, Tag) ->
-    make_indention(Indention, []) ++ Tag ++ ": ".
+format_list_match_loop(_Mod, _Tags, A, B) when A == [] orelse B == [] ->
+    [{'LIST TAIL', value, mismatch, {A, B}}];
+format_list_match_loop(Mod, [Tag | Tags], [H1 | T1], [H2 | T2]) ->
+    [format_match(Mod, Tag, H1, H2)| format_list_match_loop(Mod, Tags, T1, T2)].
 
 %% -----------------------------------------------------------------------------
+%% format tuple match
 %% -----------------------------------------------------------------------------
-make_indention(0, Str) ->
-    Str;
-make_indention(N, Str) ->
-    make_indention(N-1, [$\s, $\s, $\s, $\s | Str]).
+format_tuple_match(_Mod, Tag, A, B) when size(A) /= size(B) ->
+    {Tag, value, mismatch, {A, B}};
+format_tuple_match(Mod, Tag, A, B) ->
+    [HA | TA] = tuple_to_list(A),
+    [HB | TB] = tuple_to_list(B),
+    case Mod:?rec_fields(HA) of
+        Fields when is_list(Fields) andalso HA == HB ->
+            Sub = format_list_match_loop(Mod, Fields, TA, TB),
+            {Tag, record, match_result(A, B), [HA | Sub]};
+        _ ->
+            Tags = lists:seq(1, size(A)),
+            Sub = format_list_match_loop(Mod, Tags, [HA | TA], [HB | TB]),
+            {Tag, tuple, match_result(A, B), Sub}
+    end.
 
 %% -----------------------------------------------------------------------------
+%% get the sub format if it's record tuple or list
+%% -----------------------------------------------------------------------------
+sub_format(value, _Var) -> [];
+sub_format(record, [_RecordName | Sub]) -> Sub;
+sub_format(Type, Sub) when Type == list orelse Type == tuple -> Sub.
+
+%% -----------------------------------------------------------------------------
+%% get the indention margin width
+%% -----------------------------------------------------------------------------
+get_print_margin(Format) ->
+    get_print_margin(Format, 0, 0).
+
+get_print_margin([], _Depth, Margin) ->
+    Margin;
+get_print_margin([Format | Rest], Depth, Margin) ->
+    Result = get_print_margin(Format, Depth, Margin),
+    get_print_margin(Rest, Depth, Result);
+get_print_margin({Tag, Type, _MatchResult, Var}, Depth, Margin) ->
+    Result = case length(term2string(Tag)) - Depth * ?ind_width of
+        TmpMargin when TmpMargin > 0 ->
+            erlang:max(TmpMargin, Margin);
+        _ ->
+            Margin
+    end,
+    get_print_margin(sub_format(Type, Var), Depth+1, Result).
+
+%% -----------------------------------------------------------------------------
+%% print match format
+%% -----------------------------------------------------------------------------
+print_match_format(_Format, []) ->
+    ok; %% no print option, ignore
+print_match_format(Format, [raw | _]) ->
+    io:format("~p~n", [Format]);
+print_match_format(Format, Options) ->
+    PrintMargin = get_print_margin(Format) + 2,
+    print_match_format(Format, hd(Options), PrintMargin, 0).
+
+print_match_format([], _Option, _Margin, _Depth) ->
+    ok;
+print_match_format([Format | Rest], Option, Margin, Depth) ->
+    print_match_format(Format, Option, Margin, Depth),
+    print_match_format(Rest, Option, Margin, Depth);
+print_match_format({Tag, Type, MatchResult, Var}, Option, Margin, Depth) ->
+    TagStr = make_tag_str(Margin + Depth * ?ind_width, Tag),
+    VarStr = case Type of
+        value when MatchResult == match ->
+            term2string(Var);
+        value when MatchResult == mismatch ->
+            {A, B} = Var,
+            "EXPECT = " ++ term2string(A) ++ "\n" ++
+            lists:duplicate(length(TagStr) + 2, $\s) ++
+            "   GOT = " ++ term2string(B);
+        list ->
+            "[...]";
+        tuple ->
+            "{...}";
+        record ->
+            "#" ++ term2string(hd(Var)) ++ "{...}"
+    end,
+    case Option == all orelse MatchResult == mismatch of
+        true ->
+            fp(TagStr ++ ": " ++ VarStr ++ "\n");
+        false ->
+            do_nothing
+    end,
+    print_match_format(sub_format(Type, Var), Option, Margin, Depth+1).
+
+%% -----------------------------------------------------------------------------
+%% Width = 4, Tag = "abc" -> " abc"
+%% -----------------------------------------------------------------------------
+make_tag_str(Width, Tag) when not is_list(Tag) ->
+    make_tag_str(Width, term2string(Tag));
+make_tag_str(Width, TagStr) ->
+    lists:duplicate(Width - length(TagStr), $\s) ++ TagStr. 
+
+%% -----------------------------------------------------------------------------
+%% check if a string (integer list) is printabel
 %% -----------------------------------------------------------------------------
 is_printable(L) when is_list(L) ->
-    Pred = fun(C) ->
-        C > 8 andalso C < 127
-    end,
-    lists:all(Pred, L).
-
-%% -----------------------------------------------------------------------------
-%% make equivalent width string list
-%% -----------------------------------------------------------------------------
-ew(StrList) ->
-    MaxFun = fun(Str, Max) -> erlang:max(length(Str), Max) end,
-    Width = lists:foldl(MaxFun, 0, StrList),
-    FormatStr = "~-" ++ term2string(Width) ++ "s",
-    [lists:flatten(io_lib:format(FormatStr, [S])) || S <- StrList].
+    lists:all(fun(C) -> C > 8 andalso C < 127 end, L).
 
 %% -----------------------------------------------------------------------------
 %% function: term2string(term()) -> string()
@@ -228,16 +199,61 @@ ew(StrList) ->
 %% convert term to string
 %% -----------------------------------------------------------------------------
 term2string(T) ->
-  lists:flatten(io_lib:format("~100000p", [T])).
+  lists:flatten(io_lib:format("~10000p", [T])).
   %% re:replace(Str, "\\n", "\\\\n", [global, {return, list}]).
 
 %% -----------------------------------------------------------------------------
 %% formated print
 %% -----------------------------------------------------------------------------
 fp(String) ->
-    % io:put_chars(String),
-    io:put_chars(standard_error, String).
+    io:put_chars(String).
 
 fp(FormatStr, ArgList) ->
     fp(io_lib:format(FormatStr, ArgList)).
+
+%% -----------------------------------------------------------------------------
+%% parse transform
+%% -----------------------------------------------------------------------------
+parse_transform(Forms, _Options) ->
+    translate(Forms, [],[]).
+
+translate([F = {attribute, LINE, module, _Mod} | Rest], Acc, Records) ->
+    translate(Rest,
+              [{attribute, LINE, export, [{?rec_fields, 1}]}, F | Acc],
+              Records);
+
+translate([F = {attribute, LINE, record, Rec} | Rest], Acc, Records) ->
+    [Name, Fields] = tuple_to_list(Rec),
+    FieldNames = [ 
+        % Dynamicaly long tuples? STINKS! Bad OTP, Bad...
+        element(3, element(3, Field)) || 
+            Field <- Fields, 
+            record_field == element(1,Field), 
+            atom == element(1,element(3,Field))
+    ],
+    translate(Rest, [F | Acc], [{Name, LINE, FieldNames} | Records]);
+
+translate([F = {eof, LINE} | Rest], Acc, Records) ->
+    translate(Rest, [F, make_rec_fields_function(Records, LINE) | Acc ], []);
+
+translate([F | Rest], Acc, Records) ->
+    translate(Rest, [F | Acc], Records);
+
+translate([], Acc, []) ->
+    lists:reverse(Acc).
+
+make_rec_fields_function(Records, LINE) ->
+    MkAtomList = fun(Names) ->
+                    lists:foldl(fun(N,Acc) ->
+                                    {cons, LINE, {atom, LINE, N}, Acc}
+                                end,
+                                {nil,LINE},
+                                lists:reverse(Names))
+                 end,
+    Clauses =
+        [{clause, L, [{atom, LINE, Name}], [], [MkAtomList(FieldNames)]} ||
+         {Name, L, FieldNames} <- Records ]
+        ++
+        [ {clause, LINE, [{var, LINE, '_'}], [], [{atom, LINE, undefined}]}],
+    {function, LINE, ?rec_fields, 1, Clauses}.
 
