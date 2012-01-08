@@ -1,0 +1,11 @@
+{application, mockymockerson,
+ [ {description, ""}
+ , {vsn, "1"}
+ , {registered, []}
+ , {applications, [ kernel
+                  , stdlib
+                  , eunit
+                  ]}
+ , {mod, {mockymockerson, []}}
+ ]}.
+
