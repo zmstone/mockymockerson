@@ -2,6 +2,10 @@
 -ifndef(MOCKYMOCKERSON_HRL_).
 -define(MOCKYMOCKERSON_HRL_, true).
 
+-include_lib("eunit/include/eunit.hrl").
+
+-include("mockymockerson_em.hrl").
+
 %%
 %% Whatever = {ArgList, Result}                        |
 %%            {Arity, Result}                          |
@@ -13,9 +17,12 @@
 -define(mock_n(N, Mod, Fun, Whatever),
         mockymockerson:mock_n(N, ?MODULE, ?LINE, Mod, Fun, Whatever)).
 
--define(match(A, B), mymatch:run(?MODULE, ?LINE, A, B)).
+-ifdef(assertEqual).
 
--define(ct(CASE), {CASE, fun(ARG) -> CASE(ARG) end}).
+-undef(assertEqual).
+-define(assertEqual(Expected, Expr), ?match(Expected, Expr)).
+
+-endif.
 
 -endif.
 
