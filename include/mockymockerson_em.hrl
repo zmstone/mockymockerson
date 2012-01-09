@@ -9,6 +9,5 @@
 -define(match_opt(A, B, Opt),
         mockymockerson_match:run(?MODULE, ?LINE, A, B, Opt)).
 
--if
 -endif.
 
