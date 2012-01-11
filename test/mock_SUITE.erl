@@ -1,8 +1,6 @@
 
 -module(mock_SUITE).
 
--export([all_test/0]).
-
 -include("mockymockerson.hrl").
 
 %%% ----------------------------------------------------------------------------

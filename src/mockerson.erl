@@ -43,20 +43,24 @@ call_mocker(#mock{mocker = Mocker}, RealArgs) when is_function(Mocker) ->
         Result ->
             Result
     end;
-call_mocker(#mock{expArgs = ExpArgs} = Mock, RealArgs) when is_list(ExpArgs) ->
-    case mymatch:match(ExpArgs, RealArgs) of
-        true ->
+call_mocker(#mock{tester = Mod,
+                  expArgs = ExpArgs,
+                  line = Line} = Mock, RealArgs) when is_list(ExpArgs) ->
+    FixedArgs = mockymockerson_ignore:fix(ExpArgs, RealArgs),
+    case catch mockymockerson_match:run(Mod, Line, FixedArgs, RealArgs, []) of
+        ok ->
             Mock#mock.result;
-        MisMatchFormat ->
-            throw(?excep({"Arg List match failed", MisMatchFormat}))
+        {_, MisMatchFormat} ->
+            throw({arg_list_mismatch, MisMatchFormat})
     end.
 
 %%% ----------------------------------------------------------------------------
 %%% return {ok, Whatever} or {fault, Reason}
 %%% ----------------------------------------------------------------------------
 make_mocker(Mock) ->
-    %% {M, F, A} = Mock#mock.mfa,
+    % {M, F, A} = Mock#mock.mfa,
     %% io:format("mocking ~p:~p/~p~n", [M, F, A]),
+    %% io:format("result: ~p\n", [Mock#mock.result]),
     AbstractCode = make_mocker_attributes(Mock) ++
                    make_mocker_functions(Mock),
     compile_and_load_mocker(AbstractCode),
