@@ -24,5 +24,7 @@
     realArgs
     }).
 
+-define(p(Str), io:put_chars(standard_error, Str)).
+-define(fp(Fmt, Args), ?p(io_lib:format(Fmt, Args))).
 -endif.
 

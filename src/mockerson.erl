@@ -3,8 +3,9 @@
 
 %% exports for mocky
 -export([
-    mock/2,
-    call/1
+     mock/2
+    ,call/1
+    ,purge/0
         ]).
 
 -include("mockymockerson_private.hrl").
@@ -20,6 +21,27 @@ mock(Mockerson, #mock{mfa = Mfa} = Mock) ->
             put(Mfa, [Mock]),
             make_mocker(Mock)
     end.
+
+%%% ----------------------------------------------------------------------------
+%%% ----------------------------------------------------------------------------
+purge() ->
+    AllMockInfo = get_all_mock_info(),
+    AllModules = [M || {{M, _F, _A}, _MockList} <- AllMockInfo],
+    [purge(Module) || Module <- AllModules],
+    ExtraMocks = [{M, F, A, length(MockList)} ||
+                  {{M, F, A}, MockList} <- AllMockInfo, MockList /= []],
+    case ExtraMocks of
+    [] ->
+        ok;
+    _ ->
+        throw(?excep({"Mocked function not called", ExtraMocks}))
+    end.
+
+%%% ----------------------------------------------------------------------------
+%%% ----------------------------------------------------------------------------
+purge(Module) ->
+    code:purge(Module),
+    code:delete(Module).
 
 %%% ----------------------------------------------------------------------------
 %%% ----------------------------------------------------------------------------
@@ -59,8 +81,8 @@ call_mocker(#mock{tester = Mod,
 %%% ----------------------------------------------------------------------------
 make_mocker(Mock) ->
     %% {M, F, A} = Mock#mock.mfa,
-    %% io:format("mocking ~p:~p/~p~n", [M, F, A]),
-    %% io:format("result: ~p\n", [Mock#mock.result]),
+    %% ?fp("mocking ~p:~p/~p~n", [M, F, A]),
+    %% ?fp("result: ~p\n", [Mock#mock.result]),
     AbstractCode = make_mocker_attributes(Mock) ++
                    make_mocker_functions(Mock),
     compile_and_load_mocker(AbstractCode),
@@ -77,8 +99,10 @@ make_mocker_attributes(#mock{mfa  = {Mod, _Fun, _Arity},
 %%% ----------------------------------------------------------------------------
 make_mocker_functions(#mock{mfa  = {Mod, _Fun, _Arity},
                             line = Line}) ->
-    FaList = filter_fa_list(lists:sort(get_fa_list(Mod))),
-    make_mocker_functions(FaList, Mod, Line).
+    AllMockInfo = get_all_mock_info(),
+    FaList0 = [{F, A} || {{M, F, A}, _Mockers} <- AllMockInfo, M == Mod],
+    FaList1 = lists:usort(FaList0),
+    make_mocker_functions(FaList1, Mod, Line).
 
 make_mocker_functions([], _Mod, _Line) ->
     [];
@@ -117,31 +141,13 @@ make_cons_arg_tuple([Arg | ArgList], Line) ->
 
 %%% ----------------------------------------------------------------------------
 %%% ----------------------------------------------------------------------------
-get_fa_list(Mod) ->
-    get_fa_list(Mod, get()).
-
-get_fa_list(_Mod, []) ->
-    [];
-get_fa_list(Mod, [{{Mod, F, A}, _Mock} | Rest]) ->
-    [{F, A} | get_fa_list(Rest)];
-get_fa_list(Mod, [_Other | Rest]) ->
-    get_fa_list(Mod, Rest).
-
-%%% ----------------------------------------------------------------------------
-%%% ----------------------------------------------------------------------------
-filter_fa_list([]) ->
-    [];
-filter_fa_list([A, A | Rest]) ->
-    filter_fa_list([A | Rest]);
-filter_fa_list([A | Rest]) ->
-    [A | filter_fa_list(Rest)].
+get_all_mock_info() ->
+    [M || M = {{_M, _F, _A}, _MockList} <- get()].
 
 %%% ----------------------------------------------------------------------------
 %%% ----------------------------------------------------------------------------
 compile_and_load_mocker(AbstractCode) ->
     {ok, Module, Binary} = compile:forms(AbstractCode),
-    code:purge(Module),
-    code:delete(Module),
+    purge(Module),
     {module, Module} = load_module(Module, Binary).
-    %% io:format("mocking module ~p loaded~n", [Module]).
 
