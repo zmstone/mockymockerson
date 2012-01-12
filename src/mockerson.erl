@@ -51,14 +51,14 @@ call_mocker(#mock{tester = Mod,
         ok ->
             Mock#mock.result;
         {_, MisMatchFormat} ->
-            throw({arg_list_mismatch, MisMatchFormat})
+            throw(?excep({"Arg List mismatch", MisMatchFormat}))
     end.
 
 %%% ----------------------------------------------------------------------------
 %%% return {ok, Whatever} or {fault, Reason}
 %%% ----------------------------------------------------------------------------
 make_mocker(Mock) ->
-    % {M, F, A} = Mock#mock.mfa,
+    %% {M, F, A} = Mock#mock.mfa,
     %% io:format("mocking ~p:~p/~p~n", [M, F, A]),
     %% io:format("result: ~p\n", [Mock#mock.result]),
     AbstractCode = make_mocker_attributes(Mock) ++

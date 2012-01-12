@@ -3,31 +3,13 @@
 
 -include("mockymockerson.hrl").
 
-%%% ----------------------------------------------------------------------------
-%%% All test suites and cases
-%%% ----------------------------------------------------------------------------
-all_test() -> 
-    ts_arity_result(),
-    ts_args_result(),
-    ts_mocking_fun(),
-    ts_mocking_error(),
-    t_mut_run(),
-    ok.
-
-%%% ----------------------------------------------------------------------------
-%%% Mock functions with arity and result
-%%% ----------------------------------------------------------------------------
-ts_arity_result() ->
-    t_arity_result_normal(),
-    t_arity_result_twice(),
-    t_arity_result_3_times(),
-    t_arity_result_too_many_invokes(),
-    ok.
+-export([
+]).
 
 %%% ----------------------------------------------------------------------------
 %%% Mock mod:fun once
 %%% ----------------------------------------------------------------------------
-t_arity_result_normal() ->
+arity_result_normal_test() ->
     ?mock(mymod, myfun, {1, ok}),
     ?match(ok, mymod:myfun(whatever)),
     ok.
@@ -35,7 +17,7 @@ t_arity_result_normal() ->
 %%% ----------------------------------------------------------------------------
 %%% Mock mod:fun twice
 %%% ----------------------------------------------------------------------------
-t_arity_result_twice() ->
+arity_result_twice_test() ->
     ?mock(mymod, myfun, {1, ok}),
     ?mock(mymod, myfun, {1, cool}),
     ok = mymod:myfun(whatever),
@@ -45,7 +27,7 @@ t_arity_result_twice() ->
 %%% ----------------------------------------------------------------------------
 %%% Mock mod:fun by a given list of {arity result}
 %%% ----------------------------------------------------------------------------
-t_arity_result_3_times() ->
+arity_result_3_times_test() ->
     ?mock(mod, func, [{1, ok},
                       {1, cool},
                       {1, good}]),
@@ -57,10 +39,10 @@ t_arity_result_3_times() ->
 %%% ----------------------------------------------------------------------------
 %%% mod:fun is invoked more times than it is mocked
 %%% ----------------------------------------------------------------------------
-t_arity_result_too_many_invokes() ->
-    ?mock(mod, func, {0, ok}),
-    ok = mod:func(),
-    case catch mod:func() of
+arity_result_too_many_invokes_test() ->
+    ?mock(mod, func, {1, ok}),
+    ok = mod:func(a),
+    case catch mod:func(a) of
         ok ->
             exit({failed, t_arity_result_too_many_invokes});
         Exception ->
@@ -70,17 +52,9 @@ t_arity_result_too_many_invokes() ->
     ok.
 
 %%% ----------------------------------------------------------------------------
-%%% mock mod:fun by given arg list and result
-%%% ----------------------------------------------------------------------------
-ts_args_result() ->
-    t_args_result_normal(),
-    t_args_result_batch(),
-    ok.
-
-%%% ----------------------------------------------------------------------------
 %%% mock mod:fun one time in one line
 %%% ----------------------------------------------------------------------------
-t_args_result_normal() ->
+args_result_normal_test() ->
     ?mock(mymod, myfun, {['_whatever'], ok}),
     ?mock(mymod, myfun, {[must_match], cool}),
     ok = mymod:myfun(whatsoever),
@@ -90,27 +64,19 @@ t_args_result_normal() ->
 %%% ----------------------------------------------------------------------------
 %%% mock mod:fun by given list of arg-list and result
 %%% ----------------------------------------------------------------------------
-t_args_result_batch() ->
+args_result_batch_test() ->
     ?mock(mymod, myfun, [{[whatever], ok},
                          {[whatsoever], cool},
                          {['_'], {ok, "$don't match this one"}}]),
     ?match(ok, mymod:myfun(whatever)),
     ?match(cool, mymod:myfun(whatsoever)),
-    ?match({ok, '_no_match'}, mymod:myfun(crap)),
-    ok.
-
-%%% ----------------------------------------------------------------------------
-%%% mock mod:fun by given function
-%%% ----------------------------------------------------------------------------
-ts_mocking_fun() ->
-    t_mocking_fun_normal(),
-    t_mocking_fun_undef(),
+    ?fixed_match({ok, '_no_match'}, mymod:myfun(crap)),
     ok.
 
 %%% ----------------------------------------------------------------------------
 %%% mock mod:fun by given function with specific number of calls
 %%% ----------------------------------------------------------------------------
-t_mocking_fun_normal() ->
+mocking_fun_normal_test() ->
     Fun = fun(whatever) -> ok;
              (whatsoever) -> cool;
              (_) -> {ok, "$don't match this one"}
@@ -118,13 +84,13 @@ t_mocking_fun_normal() ->
     ?mock_n(3, mymod, myfun, Fun),
     ?match(ok, mymod:myfun(whatever)),
     ?match(cool, mymod:myfun(whatsoever)),
-    ?match({ok, '_no_match'}, mymod:myfun(crap)),
+    {ok, _} = mymod:myfun(crap),
     ok.
 
 %%% ----------------------------------------------------------------------------
 %%% mock mod:fun/1 but no mod:fun/2
 %%% ----------------------------------------------------------------------------
-t_mocking_fun_undef() ->
+mocking_fun_undef_test() ->
     Fun = fun(whatever) -> ok end,
     ?mock(mymod, myfun, Fun),
     ok = mymod:myfun(whatever),
@@ -139,14 +105,7 @@ t_mocking_fun_undef() ->
 %%% ----------------------------------------------------------------------------
 %%% when trying to mock a loaded module
 %%% ----------------------------------------------------------------------------
-ts_mocking_error() ->
-    t_mocking_error_loaded_module(),
-    ok.
-
-%%% ----------------------------------------------------------------------------
-%%% when trying to mock a loaded module
-%%% ----------------------------------------------------------------------------
-t_mocking_error_loaded_module() ->
+mocking_error_loaded_module_test() ->
     try ?mock(mockymockerson, whatever_function, whatever_arity) of
         _Result ->
             nok
@@ -158,7 +117,7 @@ t_mocking_error_loaded_module() ->
 %%% ----------------------------------------------------------------------------
 %%% Test mut:run/0
 %%% ----------------------------------------------------------------------------
-t_mut_run() ->
+mut_run_test() ->
     ?mock(mymod, myfun, {[whatever], ok}),
     ok = mut:run(),
     ok.

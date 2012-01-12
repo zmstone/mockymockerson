@@ -70,6 +70,9 @@ handle_call(#mock{} = Mock,  _From, Mocky) ->
             {reply, {fault, Reason}, Mocky}
     end;
 handle_call(#mock_call{} = MockCall, _From, Mocky) ->
-    Result = mockerson:call(MockCall),
-    {reply, Result, Mocky}.
+    try {reply, mockerson:call(MockCall), Mocky} 
+    catch
+    throw:Exception ->
+        {reply, Exception, Mocky}
+    end.
 

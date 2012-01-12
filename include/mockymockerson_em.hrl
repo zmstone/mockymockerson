@@ -9,5 +9,8 @@
 -define(match_opt(A, B, Opt),
         mockymockerson_match:run(?MODULE, ?LINE, A, B, Opt)).
 
+-define(fixed_match(A, B),
+        (fun(X, Y) -> Z = mockymockerson_ignore:fix(X, Y), ?match(Z, Y) end)(A, B)).
+
 -endif.
 
