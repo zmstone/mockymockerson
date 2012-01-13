@@ -13,5 +13,6 @@ all_test() ->
     ?assertEqual(record_info(fields, a), '$MOCKYMOCKERSON_RECORD_FIELDS'(a)),
     ?assertEqual(record_info(fields, b), '$MOCKYMOCKERSON_RECORD_FIELDS'(b)),
     ?assertEqual(record_info(fields, x), '$MOCKYMOCKERSON_RECORD_FIELDS'(x)),
+    ?assertEqual(undefined, '$MOCKYMOCKERSON_RECORD_FIELDS'(rec_not_defined)),
     ok.
 

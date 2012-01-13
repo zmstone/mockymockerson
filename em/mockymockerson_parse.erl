@@ -12,42 +12,43 @@
 parse_transform(Forms, _Options) ->
     translate(Forms, [],[]).
 
+%% -----------------------------------------------------------------------------
+%% traverse through the abstraction code, find all the defined records
+%% -----------------------------------------------------------------------------
+translate([], Acc, []) ->
+    lists:reverse(Acc);
+
 translate([F = {attribute, LINE, module, _Mod} | Rest], Acc, Records) ->
     translate(Rest,
               [{attribute, LINE, export, [{?rec_fields, 1}]}, F | Acc],
               Records);
 
-translate([F = {attribute, LINE, record, Rec} | Rest], Acc, Records) ->
-    [Name, Fields] = tuple_to_list(Rec),
-    FieldNames = [ 
-        element(3, element(3, Field)) || 
-            Field <- Fields, 
-            record_field == element(1,Field), 
-            atom == element(1,element(3,Field))
-    ],
-    translate(Rest, [F | Acc], [{Name, LINE, FieldNames} | Records]);
+translate([F = {attribute, _LINE, record, {Rec, _}} | Rest], Acc, Records) ->
+    translate(Rest, [F | Acc], [Rec | Records]);
 
 translate([F = {eof, LINE} | Rest], Acc, Records) ->
-    translate(Rest, [F, make_rec_fields_function(Records, LINE) | Acc ], []);
+    translate(Rest, [F, make_rec_fields_function(Records, LINE) | Acc], []);
 
 translate([F | Rest], Acc, Records) ->
-    translate(Rest, [F | Acc], Records);
+    translate(Rest, [F | Acc], Records).
 
-translate([], Acc, []) ->
-    lists:reverse(Acc).
-
-make_rec_fields_function(Records, LINE) ->
-    MkAtomList = fun(Names) ->
-                    lists:foldl(fun(N,Acc) ->
-                                    {cons, LINE, {atom, LINE, N}, Acc}
-                                end,
-                                {nil,LINE},
-                                lists:reverse(Names))
-                 end,
+%% -----------------------------------------------------------------------------
+%% make up the secretly exported function ?rec_fields/1
+%% -----------------------------------------------------------------------------
+make_rec_fields_function(Records, L) ->
     Clauses =
-        [{clause, L, [{atom, LINE, Name}], [], [MkAtomList(FieldNames)]} ||
-         {Name, L, FieldNames} <- Records ]
-        ++
-        [ {clause, LINE, [{var, LINE, '_'}], [], [{atom, LINE, undefined}]}],
-    {function, LINE, ?rec_fields, 1, Clauses}.
+    [
+        {clause, L,
+            [{atom, L, Name}], [],
+            [
+                {call, L,
+                    {atom, L, record_info},
+                    [{atom, L, fields}, {atom, L, Name}]
+                }
+            ]
+         } || Name <- Records
+    ]
+    ++
+    [ {clause, L, [{var, L, '_'}], [], [{atom, L, undefined}]} ],
+    {function, L, ?rec_fields, 1, Clauses}.
 
