@@ -79,7 +79,7 @@ dispatch(Worker, #call{} = MockCall) ->
 clear() ->
     Mockers = [Mocker || {_Module, Mocker} <- ets:tab2list(?mockers)],
     ets:delete_all_objects(?mockers),
-    ExtraMocks = [gen_server:call(Mocker, purge) || Mocker <- Mockers],
+    ExtraMocks = [gen_server:call(Mocker, clear) || Mocker <- Mockers],
     [catch gen_server:call(Mocker, stop) || Mocker <- Mockers],
     lists:append(ExtraMocks).
 

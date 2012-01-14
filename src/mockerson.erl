@@ -8,8 +8,8 @@
 %% exports for mocky
 -export([
      mock/2
-    ,call/1
-    ,purge/0
+    ,call/2
+    ,clear/1
 ]).
 
 -include("mockymockerson_private.hrl").
@@ -17,42 +17,74 @@
 -define(mocked_mod_entry, mockymockerson).
 -define(mocked_fun_entry, call).
 
+take_first(_Mfa, [], _Acc) ->
+    ?undef;
+take_first(Mfa, [Mock | Rest], Acc) ->
+    case Mock of
+    #mock{mfa = Mfa} ->
+        {Mock, lists:reverse(Acc) ++ Rest};
+    _ ->
+        take_first(Mfa, Rest, [Mock | Acc])
+    end.
+
+unique_mfa_list(#mocker_state{used_list = UsedList,
+                              mock_list = MockList}) ->
+    unique_mfa_list(UsedList ++ MockList);
+unique_mfa_list(MockList) ->
+    lists:usort([Mfa || #mock{mfa = Mfa} <- MockList]).
+
 %%% ----------------------------------------------------------------------------
+%%% add a new mock, fake a function and compile the module then re-load it
+%%% if it's a new function. i.e. never mocked before
 %%% ----------------------------------------------------------------------------
-mock(Mockerson, #mock{mfa = Mfa} = Mock) ->
-    case get(Mfa) of
-        MockList when is_list(MockList) ->
-            put(Mfa, MockList ++ [Mock]),
-            {ok, Mockerson};
-        _ ->
-            put(Mfa, [Mock]),
-            make_mocker(Mock)
+mock(#mock{mfa = Mfa} = Mock,
+     #mocker_state{mock_list = MockList} = State) ->
+    MfaList = unique_mfa_list(State),
+    case lists:member(Mfa, MfaList) of
+    true ->
+        %% this function is already mocked befre
+        do_nothing;
+    false ->
+        %% this function is not mocked yet
+        make_mocker([Mfa | MfaList])
+    end,
+    {ok, State#mocker_state{mock_list = MockList ++ [Mock]}}.
+
+%%% ----------------------------------------------------------------------------
+%%% Handle a call from the fake mocked function
+%%% return the return value for the mocked function
+%%% ----------------------------------------------------------------------------
+call(#call{mfa = Mfa, realArgs = RealArgs},
+     #mocker_state{used_list = UsedList, mock_list = MockList} = State) ->
+    MfaList = unique_mfa_list(MockList),
+    case lists:member(Mfa, MfaList) of
+    true ->
+        {Mock, NewMockList} = take_first(Mfa, MockList, []),
+        {call_mocker(Mock, RealArgs),
+         State#mocker_state{used_list = [Mock | UsedList],
+                            mock_list = NewMockList}};
+    false ->
+        throw(?excep({"Mocker used up", Mfa}))
     end.
 
 %%% ----------------------------------------------------------------------------
+%%% clean up the mockers, purge the loaded fake module
 %%% ----------------------------------------------------------------------------
-purge() ->
-    AllMockInfo = get_all_mock_info(),
-    AllMFA = [MFA || {MFA, _MockList} <- AllMockInfo],
-    [erase(MFA) || MFA <- AllMFA],
-    [purge(Module) || {Module, _F, _A}  <- AllMFA],
-    [{M, F, A, length(MockList)} ||
-                         {{M, F, A}, MockList} <- AllMockInfo, MockList /= []].
+clear(#mocker_state{used_list = UsedList, mock_list = MockList} = State) ->
+    case UsedList ++ MockList of
+    [] ->
+        do_nothing;
+    [#mock{mfa = {Module, _F, _A}} | _] ->
+        purge(Module)
+    end,
+    {unique_mfa_list(MockList), State}.
+
+%%% ============================================================================
+%%% INTERNAL FUNCTIONS
+%%% ============================================================================
 
 %%% ----------------------------------------------------------------------------
-%%% ----------------------------------------------------------------------------
-call(#call{mfa = Mfa, realArgs = RealArgs}) ->
-    case get(Mfa) of
-        [] ->
-            throw(?excep({"Mocker used up", Mfa}));
-        [Mock | MockList] ->
-            put(Mfa, MockList),
-            call_mocker(Mock, RealArgs);
-        _ ->
-            throw(?excep({"Mocker undefined", Mfa}))
-    end.
-
-%%% ----------------------------------------------------------------------------
+%%% return the return value for the mocked function
 %%% ----------------------------------------------------------------------------
 call_mocker(#mock{mocker = Mocker}, RealArgs) when is_function(Mocker) ->
     case catch apply(Mocker, RealArgs) of
@@ -73,76 +105,70 @@ call_mocker(#mock{tester = Mod,
     end.
 
 %%% ----------------------------------------------------------------------------
-%%% return {ok, Whatever} or {fault, Reason}
+%%% fake a module with the mocked functions
 %%% ----------------------------------------------------------------------------
-make_mocker(Mock) ->
-    %% {M, F, A} = Mock#mock.mfa,
-    %% ?fp("mocking ~p:~p/~p~n", [M, F, A]),
-    %% ?fp("result: ~p\n", [Mock#mock.result]),
-    AbstractCode = make_mocker_attributes(Mock) ++
-                   make_mocker_functions(Mock),
+make_mocker(MfaList) ->
+    AbstractCode = make_mocker_attributes(MfaList) ++
+                   make_mocker_functions(MfaList),
     compile_and_load_mocker(AbstractCode),
     {ok, mocked}.
 
 %%% ----------------------------------------------------------------------------
+%%% make the fake module export all functions
 %%% ----------------------------------------------------------------------------
-make_mocker_attributes(#mock{mfa  = {Mod, _Fun, _Arity},
-                             line = Line}) ->
-    [{attribute, Line, module, Mod},
-     {attribute, Line, compile, export_all}].
+make_mocker_attributes([{Mod, _F, _A} | _]) ->
+    [{attribute, 1, module, Mod},
+     {attribute, 1, compile, export_all}].
 
 %%% ----------------------------------------------------------------------------
+%%% make the mocked function
 %%% ----------------------------------------------------------------------------
-make_mocker_functions(#mock{mfa  = {Mod, _Fun, _Arity},
-                            line = Line}) ->
-    AllMockInfo = get_all_mock_info(),
-    FaList0 = [{F, A} || {{M, F, A}, _Mockers} <- AllMockInfo, M == Mod],
-    FaList1 = lists:usort(FaList0),
-    make_mocker_functions(FaList1, Mod, Line).
+make_mocker_functions(MfaList) ->
+    {Mod, _F, _A} = hd(MfaList),
+    FaList = [{F, A} || {_M, F, A} <- MfaList],
+    make_mocker_functions(FaList, Mod).
 
-make_mocker_functions([], _Mod, _Line) ->
+make_mocker_functions([], _Mod) ->
     [];
-make_mocker_functions([{Fun, Arity} | FaList], Mod, Line) ->
-    ArgList = make_mocker_arg_list(0, Arity, Line),
+make_mocker_functions([{Fun, Arity} | FaList], Mod) ->
+    ArgList = make_mocker_arg_list(0, Arity),
     Function =
-        {function, Line, Fun, Arity,
-            [{clause, Line,
+        {function, 1, Fun, Arity,
+            [{clause, 1,
                 ArgList,
                 [],
-                [{call, Line,
-                    {remote, Line,
-                     {atom, Line, ?mocked_mod_entry},
-                     {atom, Line, ?mocked_fun_entry}},
-                    [{atom, Line, Mod},
-                     {atom, Line, Fun},
-                     make_cons_arg_tuple(ArgList, Line)
+                [{call, 1,
+                    {remote, 1,
+                     {atom, 1, ?mocked_mod_entry},
+                     {atom, 1, ?mocked_fun_entry}},
+                    [{atom, 1, Mod},
+                     {atom, 1, Fun},
+                     make_cons_arg_tuple(ArgList)
                     ]
                  }]
             }]
         },
-    [Function | make_mocker_functions(FaList, Mod, Line)].
+    [Function | make_mocker_functions(FaList, Mod)].
 
 %%% ----------------------------------------------------------------------------
+%%% make the argument list for the mocked function 
 %%% ----------------------------------------------------------------------------
-make_mocker_arg_list(N, N, _Line) ->
+make_mocker_arg_list(N, N) ->
     [];
-make_mocker_arg_list(I, N, Line) ->
-    Var = {var, Line, list_to_atom("A" ++ integer_to_list(I))},
-    [Var | make_mocker_arg_list(I+1, N, Line)].
+make_mocker_arg_list(I, N) ->
+    Var = {var, 1, list_to_atom("A" ++ integer_to_list(I))},
+    [Var | make_mocker_arg_list(I+1, N)].
 
 %%% ----------------------------------------------------------------------------
+%%% represent list as 'cons' tuples
 %%% ----------------------------------------------------------------------------
-make_cons_arg_tuple([], Line) ->
-    {nil, Line};
-make_cons_arg_tuple([Arg | ArgList], Line) ->
-    {cons, Line, Arg, make_cons_arg_tuple(ArgList, Line)}.
+make_cons_arg_tuple([]) ->
+    {nil, 1};
+make_cons_arg_tuple([Arg | ArgList]) ->
+    {cons, 1, Arg, make_cons_arg_tuple(ArgList)}.
 
 %%% ----------------------------------------------------------------------------
-%%% ----------------------------------------------------------------------------
-get_all_mock_info() ->
-    [M || M = {{_M, _F, _A}, _MockList} <- get()].
-
-%%% ----------------------------------------------------------------------------
+%%% compile and load the fake module
 %%% ----------------------------------------------------------------------------
 compile_and_load_mocker(AbstractCode) ->
     {ok, Module, Binary} = compile:forms(AbstractCode),
@@ -151,6 +177,7 @@ compile_and_load_mocker(AbstractCode) ->
     {module, Module} = load_module(Module, Binary).
 
 %%% ----------------------------------------------------------------------------
+%%% delete the fake module from runtime
 %%% ----------------------------------------------------------------------------
 purge(Module) ->
     code:purge(Module),

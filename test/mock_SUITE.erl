@@ -141,7 +141,7 @@ extra_mocked_functions_test() ->
         throw(failed)
     catch
     throw:{"Mocked function(s) not called",
-           [{mymod, myfun, 0, _ExtraTimes = 1}]} ->
+           [{mymod, myfun, 0}]} ->
         ok
     end.
 

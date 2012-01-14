@@ -1,6 +1,6 @@
 
 %%%
-%%% mocker the worker 
+%%% mocker the worker, dedicated to one mocked module
 %%%
 
 -module(mocker).
@@ -23,57 +23,64 @@
 
 -include("mockymockerson_private.hrl").
 
--record(state, {}).
-
 %%% ----------------------------------------------------------------------------
+%%% start a mocker
 %%% ----------------------------------------------------------------------------
 start() ->
     gen_server:start_link(?MODULE, _Args = [], _Options = []).
 
 %%% ----------------------------------------------------------------------------
+%%% gen_server callback init function
 %%% ----------------------------------------------------------------------------
-init(_Args) ->
+init([]) ->
     process_flag(trap_exit, true),
-    {ok, #state{}}.
+    {ok, #mocker_state{}}.
 
 %%% ----------------------------------------------------------------------------
+%%% handle cast
 %%% ----------------------------------------------------------------------------
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
 %%% ----------------------------------------------------------------------------
+%%% handle info
 %%% ----------------------------------------------------------------------------
 handle_info(_Info, State) ->
     {noreply, State}.
 
 %%% ----------------------------------------------------------------------------
+%%% terminate
 %%% ----------------------------------------------------------------------------
-terminate(_Reason, _State) ->
-    catch mockerson:purge(),
+terminate(_Reason, State) ->
+    catch mockerson:clear(State),
     ok.
 
 %%% ----------------------------------------------------------------------------
+%%% code change
 %%% ----------------------------------------------------------------------------
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 %%% ----------------------------------------------------------------------------
+%%% handle calls
 %%% ----------------------------------------------------------------------------
-handle_call(purge, _From, State) ->
-    Result = mockerson:purge(),
-    {reply, Result, State};
+handle_call(clear, _From, State) ->
+    {Result, NewState} = mockerson:clear(State),
+    {reply, Result, NewState};
 handle_call(stop, _From, State) ->
-    mockerson:purge(),
-    {stop, normal, ok, State};
+    {Result, NewState} = mockerson:clear(State),
+    {stop, normal, Result, NewState};
 handle_call(#mock{} = Mock,  _From, State) ->
-    case mockerson:mock(_Mockerson = void, Mock) of
-        {ok, _NewMockerson} ->
-            {reply, ok, State};
-        {fault, Reason} ->
-            {reply, {fault, Reason}, State}
+    case mockerson:mock(Mock, State) of
+    {ok, NewState} ->
+        {reply, ok, NewState};
+    {fault, Reason} ->
+        {reply, {fault, Reason}, State}
     end;
 handle_call(#call{} = MockCall, _From, State) ->
-    try {reply, mockerson:call(MockCall), State} 
+    try mockerson:call(MockCall, State) of
+    {Result, NewState} ->
+        {reply, Result, NewState}
     catch
     throw:Exception ->
         {reply, Exception, State}

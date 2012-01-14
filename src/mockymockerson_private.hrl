@@ -23,6 +23,12 @@
     realArgs
     }).
 
+%% the loop data of a mocker worker
+-record(mocker_state, {
+     used_list = []  :: list()
+    ,mock_list = []  :: list()
+}).
+
 -define(p(Str), io:put_chars(standard_error, Str)).
 -define(fp(Fmt, Args), ?p(io_lib:format(Fmt, Args))).
 -endif.
