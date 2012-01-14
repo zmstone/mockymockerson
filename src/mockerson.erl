@@ -14,6 +14,9 @@
 
 -include("mockymockerson_private.hrl").
 
+-define(mocked_mod_entry, mockymockerson).
+-define(mocked_fun_entry, call).
+
 %%% ----------------------------------------------------------------------------
 %%% ----------------------------------------------------------------------------
 mock(Mockerson, #mock{mfa = Mfa} = Mock) ->
@@ -33,14 +36,8 @@ purge() ->
     AllMFA = [MFA || {MFA, _MockList} <- AllMockInfo],
     [erase(MFA) || MFA <- AllMFA],
     [purge(Module) || {Module, _F, _A}  <- AllMFA],
-    ExtraMocks = [{M, F, A, length(MockList)} ||
-                  {{M, F, A}, MockList} <- AllMockInfo, MockList /= []],
-    case ExtraMocks of
-    [] ->
-        ok;
-    _ ->
-        throw(?excep({"Mocked function not called", ExtraMocks}))
-    end.
+    [{M, F, A, length(MockList)} ||
+                         {{M, F, A}, MockList} <- AllMockInfo, MockList /= []].
 
 %%% ----------------------------------------------------------------------------
 %%% ----------------------------------------------------------------------------
@@ -113,7 +110,9 @@ make_mocker_functions([{Fun, Arity} | FaList], Mod, Line) ->
                 ArgList,
                 [],
                 [{call, Line,
-                    {remote, Line, {atom, Line, ?SERVER}, {atom, Line, call}},
+                    {remote, Line,
+                     {atom, Line, ?mocked_mod_entry},
+                     {atom, Line, ?mocked_fun_entry}},
                     [{atom, Line, Mod},
                      {atom, Line, Fun},
                      make_cons_arg_tuple(ArgList, Line)

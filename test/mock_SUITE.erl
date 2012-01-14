@@ -143,7 +143,7 @@ extra_mocked_functions_test() ->
     _Result ->
         throw(failed)
     catch
-    throw:{"Mocked function not called",
+    throw:{"Mocked function(s) not called",
            [{mymod, myfun, 0, _ExtraTimes = 1}]} ->
         ok
     end.
@@ -156,6 +156,18 @@ mut_run_test() ->
     ?mock(mymod, myfun, {[whatever], ok}),
     ok = mut:run(),
     mockymockerson:clear().
+
+%%% ----------------------------------------------------------------------------
+%%% should not mock a loaded module, because it's supposed to be an test obj
+%%% ----------------------------------------------------------------------------
+mock_loaded_module_test() ->
+    try ?mock(mut, run, {0, ok}) of
+    _ ->
+        throw(failed)
+    catch
+    throw:Exception ->
+        ?assertEqual({"Can not mock loaded module", {mut, run, 0}}, Exception)
+    end.
 
 %%% ----------------------------------------------------------------------------
 %%% run this case the last as to stop the application

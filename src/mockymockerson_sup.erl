@@ -9,19 +9,19 @@
      start/1
     ,init/1
     ,dispatch/1
+    ,clear/0
 ]).
 
 -include("mockymockerson_private.hrl").
 
--define(workers, mockymockerson_workers).
+-define(mockers, mockymockerson_workers).
 
 %%% ----------------------------------------------------------------------------
 %%% external call
 %%% ----------------------------------------------------------------------------
 start(_Args) ->
     {ok, Pid} = supervisor:start_link({local, ?MODULE}, ?MODULE, []),
-    supervisor:start_child(?MODULE, []),
-    ?workers = ets:new(?workers, [named_table, public]),
+    ?mockers= ets:new(?mockers, [named_table, public]),
     {ok, Pid}.
 
 %%% ----------------------------------------------------------------------------
@@ -37,18 +37,49 @@ init([]) ->
 
     {ok, {{simple_one_for_one, 0, 1}, [MockySpec]}}.
 
-dispatch(#mock{} = Mock) ->
-    case gen_server:call(?SERVER, Mock) of
+%%% ----------------------------------------------------------------------------
+%%% dispatch mocks or calls to the corresponding worker
+%%% ----------------------------------------------------------------------------
+dispatch(#mock{mfa = {M, _F, _A}} = Mock) ->
+    Worker =
+        case ets:lookup(?mockers, M) of
+        [{M, TmpWorker}] ->
+            TmpWorker;
+        _ ->
+            {ok, Pid} = supervisor:start_child(?MODULE, []),
+            ets:insert(?mockers, {M, Pid}),
+            Pid
+        end,
+    dispatch(Worker, Mock);
+dispatch(#mock_call{mfa = {M, _F, _A}} = Call) ->
+    [{M, Worker}] = ets:lookup(?mockers, M),
+    dispatch(Worker, Call).
+
+%%% ----------------------------------------------------------------------------
+%%% worker is identified, now dispatch it
+%%% ----------------------------------------------------------------------------
+dispatch(Worker, #mock{} = Mock) ->
+    case gen_server:call(Worker, Mock) of
         ok ->
             ok;
         {fault, Reason} ->
             throw(Reason)
     end;
-dispatch(#mock_call{} = MockCall) ->
-    case gen_server:call(?SERVER, MockCall) of
+dispatch(Worker, #mock_call{} = MockCall) ->
+    case gen_server:call(Worker, MockCall) of
         {?exception, Exception} ->
             throw(Exception);
         ReturnValue ->
             ReturnValue
     end.
+
+%%% ----------------------------------------------------------------------------
+%%% stop all the mockers
+%%% ----------------------------------------------------------------------------
+clear() ->
+    Mockers = [Mocker || {_Module, Mocker} <- ets:tab2list(?mockers)],
+    ets:delete_all_objects(?mockers),
+    ExtraMocks = [gen_server:call(Mocker, purge) || Mocker <- Mockers],
+    [catch gen_server:call(Mocker, stop) || Mocker <- Mockers],
+    lists:append(ExtraMocks).
 

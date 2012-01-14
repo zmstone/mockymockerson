@@ -3,7 +3,6 @@
 -define(MOCKYMOCKERSON_PRIVATE_HRL_, true).
 
 -define(undef, undefined).
--define(SERVER, mockymockerson).
 
 -define(exception, '$MOCKYMOCKERSON_EXCEPTION').
 -define(excep(Detail), {?exception, Detail}).

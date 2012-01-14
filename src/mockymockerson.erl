@@ -29,7 +29,7 @@
 %%% ----------------------------------------------------------------------------
 start() ->
     catch application:start(eunit),
-    catch application:start(mockymockerson).
+    catch application:start(?MODULE).
 
 %%% ----------------------------------------------------------------------------
 %%% application start callback
@@ -41,7 +41,7 @@ start(_Type, Args) ->
 %%% external call to stop application
 %%% ----------------------------------------------------------------------------
 stop() ->
-    application:stop(?SERVER).
+    application:stop(?MODULE).
 
 %%% ----------------------------------------------------------------------------
 %%% application stop callback
@@ -55,17 +55,18 @@ stop(_State) ->
 %%% ----------------------------------------------------------------------------
 setup() ->
     %% silent clean up
-    catch clear().
+    catch clear(),
+    ok.
 
 %%% ----------------------------------------------------------------------------
 %%% clean up the mocky-testing env
 %%% ----------------------------------------------------------------------------
 clear() ->
-    case mocky:purge() of
-    {?exception, Exception} ->
-        throw(Exception);
-    _ ->
-        ok
+    case mockymockerson_sup:clear() of
+    [] ->
+        ok;
+    ExtraMocks ->
+        throw({"Mocked function(s) not called", ExtraMocks})
     end.
 
 %%% ----------------------------------------------------------------------------
@@ -101,7 +102,7 @@ mock(TestMod, Line, Module, Function, MockerFun)
     mock(Mocker);
 
 mock(_TestMod, _Line, _Module, _Function, Whatever) ->
-    throw({bad_mocking_arg, Whatever}).
+    throw({"Bad mocking args", Whatever}).
 
 %%% ----------------------------------------------------------------------------
 %%% mock in a batch
@@ -115,12 +116,12 @@ mock_n(N, TestMod, Line, Module, Function, Whatever) ->
 %%% ----------------------------------------------------------------------------
 %%% mock a m:f/a call
 %%% ----------------------------------------------------------------------------
-mock(#mock{mfa = {Module, _F, _A}} = Mock) ->
+mock(#mock{mfa = {Module, F, A}} = Mock) ->
     case code:which(Module) of
         non_existing ->
             mockymockerson_sup:dispatch(Mock);
         _ ->
-            throw("Can not mock loaded module")
+            throw({"Can not mock loaded module", {Module, F, A}})
     end.
 
 %%% ----------------------------------------------------------------------------
