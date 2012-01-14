@@ -10,7 +10,7 @@
      start/0
     ,stop/0
     ,setup/0
-    ,clean/0
+    ,clear/0
     ,mock/5
     ,mock_n/6
     ,call/3
@@ -55,12 +55,12 @@ stop(_State) ->
 %%% ----------------------------------------------------------------------------
 setup() ->
     %% silent clean up
-    catch clean().
+    catch clear().
 
 %%% ----------------------------------------------------------------------------
 %%% clean up the mocky-testing env
 %%% ----------------------------------------------------------------------------
-clean() ->
+clear() ->
     case mocky:purge() of
     {?exception, Exception} ->
         throw(Exception);
