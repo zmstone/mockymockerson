@@ -120,17 +120,14 @@ mocking_fun_undef_test() ->
     mockymockerson:clear().
 
 %%% ----------------------------------------------------------------------------
-%%% when trying to mock a loaded module
+%%% mock two different modules
 %%% ----------------------------------------------------------------------------
 mocking_error_loaded_module_test() ->
     mockymockerson:setup(),
-    try ?mock(mockymockerson, whatever_function, whatever_arity) of
-    _Result ->
-        throw(failed)
-    catch
-    throw:_Reason ->
-        ok
-    end,
+    ?mock(mymod1, myfun, {0, ok}),
+    ?mock(mymod2, myfun, {1, ok}),
+    ok = mymod1:myfun(),
+    ok = mymod2:myfun(a),
     mockymockerson:clear().
 
 %%% ----------------------------------------------------------------------------

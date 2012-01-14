@@ -1,9 +1,9 @@
 
 %%%
-%%% mocky the worker 
+%%% mocker the worker 
 %%%
 
--module(mocky).
+-module(mocker).
 
 -behavior(gen_server).
 

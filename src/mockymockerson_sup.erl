@@ -28,14 +28,14 @@ start(_Args) ->
 %%% supervisor callback
 %%% ----------------------------------------------------------------------------
 init([]) ->
-    MockySpec = { ignored
-                , {mocky, start, []}
-                , temporary
-                , brutal_kill
-                , worker
-                , [mocky, mockerson] },
+    MockerSpec = { ignored
+                 , {mocker, start, []}
+                 , temporary
+                 , brutal_kill
+                 , worker
+                 , [mocker, mockerson] },
 
-    {ok, {{simple_one_for_one, 0, 1}, [MockySpec]}}.
+    {ok, {{simple_one_for_one, 0, 1}, [MockerSpec]}}.
 
 %%% ----------------------------------------------------------------------------
 %%% dispatch mocks or calls to the corresponding worker
