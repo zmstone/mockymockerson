@@ -7,45 +7,51 @@
 ]).
 
 %%% ----------------------------------------------------------------------------
+%%% run this test case first as to start the application
+%%% ----------------------------------------------------------------------------
+start_test() ->
+    mockymockerson:start().
+
+%%% ----------------------------------------------------------------------------
 %%% Mock mod:fun once
 %%% ----------------------------------------------------------------------------
 arity_result_normal_test() ->
-    mockymockerson:start(),
+    mockymockerson:setup(),
     ?mock(mymod, myfun, {2, ok}),
     ?mock(mymod, myfun, {1, ok}),
     ?match(ok, mymod:myfun(a,b)),
     ?match(ok, mymod:myfun(whatever)),
-    mockymockerson:stop().
+    mockymockerson:clean().
 
 %%% ----------------------------------------------------------------------------
 %%% Mock mod:fun twice
 %%% ----------------------------------------------------------------------------
 arity_result_twice_test() ->
-    mockymockerson:start(),
+    mockymockerson:setup(),
     ?mock(mymod, myfun, {1, ok}),
     ?mock(mymod, myfun, {1, cool}),
     ok = mymod:myfun(whatever),
     cool = mymod:myfun(whatsoever),
-    mockymockerson:stop().
+    mockymockerson:clean().
 
 %%% ----------------------------------------------------------------------------
 %%% Mock mod:fun by a given list of {arity result}
 %%% ----------------------------------------------------------------------------
 arity_result_3_times_test() ->
-    mockymockerson:start(),
+    mockymockerson:setup(),
     ?mock(mod, func, [{1, ok},
                       {1, cool},
                       {1, good}]),
     ok = mod:func(aaa),
     cool = mod:func(bbb),
     good = mod:func(ccc),
-    mockymockerson:stop().
+    mockymockerson:clean().
 
 %%% ----------------------------------------------------------------------------
 %%% mod:fun is invoked more times than it is mocked
 %%% ----------------------------------------------------------------------------
 arity_result_too_many_invokes_test() ->
-    mockymockerson:start(),
+    mockymockerson:setup(),
     ?mock(mod, func, {1, ok}),
     ok = mod:func(a),
     case catch mod:func(a) of
@@ -55,37 +61,37 @@ arity_result_too_many_invokes_test() ->
             ExceptionStr = lists:flatten(io_lib:format("~1000p", [Exception])),
             ?match(true, is_sub_str("Mocker used up", ExceptionStr))
     end,
-    mockymockerson:stop().
+    mockymockerson:clean().
 
 %%% ----------------------------------------------------------------------------
 %%% mock mod:fun one time in one line
 %%% ----------------------------------------------------------------------------
 args_result_normal_test() ->
-    mockymockerson:start(),
+    mockymockerson:setup(),
     ?mock(mymod, myfun, {['_whatever'], ok}),
     ?mock(mymod, myfun, {[must_match], cool}),
     ok = mymod:myfun(whatsoever),
     cool = mymod:myfun(must_match),
-    mockymockerson:stop().
+    mockymockerson:clean().
 
 %%% ----------------------------------------------------------------------------
 %%% mock mod:fun by given list of arg-list and result
 %%% ----------------------------------------------------------------------------
 args_result_batch_test() ->
-    mockymockerson:start(),
+    mockymockerson:setup(),
     ?mock(mymod, myfun, [{[whatever], ok},
                          {[whatsoever], cool},
                          {['_'], {ok, "$don't match this one"}}]),
     ?match(ok, mymod:myfun(whatever)),
     ?match(cool, mymod:myfun(whatsoever)),
     ?fixed_match({ok, '_no_match'}, mymod:myfun(crap)),
-    mockymockerson:stop().
+    mockymockerson:clean().
 
 %%% ----------------------------------------------------------------------------
 %%% mock mod:fun by given function with specific number of calls
 %%% ----------------------------------------------------------------------------
 mocking_fun_normal_test() ->
-    mockymockerson:start(),
+    mockymockerson:setup(),
     Fun = fun(whatever) -> ok;
              (whatsoever) -> cool;
              (_) -> {ok, "$don't match this one"}
@@ -94,13 +100,13 @@ mocking_fun_normal_test() ->
     ?match(ok, mymod:myfun(whatever)),
     ?match(cool, mymod:myfun(whatsoever)),
     {ok, _} = mymod:myfun(crap),
-    mockymockerson:stop().
+    mockymockerson:clean().
 
 %%% ----------------------------------------------------------------------------
 %%% mock mod:fun/1 but no mod:fun/2
 %%% ----------------------------------------------------------------------------
 mocking_fun_undef_test() ->
-    mockymockerson:start(),
+    mockymockerson:setup(),
     Fun = fun(whatever) -> ok end,
     ?mock(mymod, myfun, Fun),
     ok = mymod:myfun(whatever),
@@ -111,13 +117,13 @@ mocking_fun_undef_test() ->
     error:undef ->
        ok
     end,
-    mockymockerson:stop().
+    mockymockerson:clean().
 
 %%% ----------------------------------------------------------------------------
 %%% when trying to mock a loaded module
 %%% ----------------------------------------------------------------------------
 mocking_error_loaded_module_test() ->
-    mockymockerson:start(),
+    mockymockerson:setup(),
     try ?mock(mockymockerson, whatever_function, whatever_arity) of
     _Result ->
         throw(failed)
@@ -125,12 +131,15 @@ mocking_error_loaded_module_test() ->
     throw:_Reason ->
         ok
     end,
-    mockymockerson:stop().
+    mockymockerson:clean().
 
+%%% ----------------------------------------------------------------------------
+%%% mocked too many
+%%% ----------------------------------------------------------------------------
 extra_mocked_functions_test() ->
-    mockymockerson:start(),
+    mockymockerson:setup(),
     ?mock(mymod, myfun, {0, ok}),
-    try mockymockerson:stop() of
+    try mockymockerson:clean() of
     _Result ->
         throw(failed)
     catch
@@ -143,9 +152,15 @@ extra_mocked_functions_test() ->
 %%% Test mut:run/0
 %%% ----------------------------------------------------------------------------
 mut_run_test() ->
-    mockymockerson:start(),
+    mockymockerson:setup(),
     ?mock(mymod, myfun, {[whatever], ok}),
     ok = mut:run(),
+    mockymockerson:clean().
+
+%%% ----------------------------------------------------------------------------
+%%% run this case the last as to stop the application
+%%% ----------------------------------------------------------------------------
+stop_test() ->
     mockymockerson:stop().
 
 %%% ----------------------------------------------------------------------------

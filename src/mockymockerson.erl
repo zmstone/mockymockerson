@@ -1,29 +1,71 @@
 
+%%%
+%%% mockymockerson the application
+%%%
+
 -module(mockymockerson).
 
+%% external calls
 -export([
-     mock/5
+     start/0
+    ,stop/0
+    ,setup/0
+    ,clean/0
+    ,mock/5
     ,mock_n/6
     ,call/3
-    ,start/0
-    ,stop/0
+]).
+
+%% application callbacks
+-export([
+     start/2
+    ,stop/1
 ]).
 
 -include("mockymockerson_private.hrl").
 
 %%% ----------------------------------------------------------------------------
+%%% external call to start application
 %%% ----------------------------------------------------------------------------
-start() -> mocky:start().
+start() ->
+    application:start(?SERVER).
+
 
 %%% ----------------------------------------------------------------------------
+%%% application start callback
+%%% ----------------------------------------------------------------------------
+start(_Type, Args) ->
+    mockymockerson_sup:start(Args).
+
+%%% ----------------------------------------------------------------------------
+%%% external call to stop application
 %%% ----------------------------------------------------------------------------
 stop() ->
+    application:stop(?SERVER).
+
+%%% ----------------------------------------------------------------------------
+%%% application stop callback
+%%% ----------------------------------------------------------------------------
+stop(_State) ->
+    %% io:format("mockymockerson stoped\n"),
+    ok.
+
+%%% ----------------------------------------------------------------------------
+%%% setup the mocky-testing env
+%%% ----------------------------------------------------------------------------
+setup() ->
+    %% silent clean up
+    catch clean().
+
+%%% ----------------------------------------------------------------------------
+%%% clean up the mocky-testing env
+%%% ----------------------------------------------------------------------------
+clean() ->
     case mocky:purge() of
     {?exception, Exception} ->
-        mocky:stop(),
         throw(Exception);
     _ ->
-        mocky:stop()
+        ok
     end.
 
 %%% ----------------------------------------------------------------------------

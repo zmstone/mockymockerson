@@ -30,8 +30,9 @@ mock(Mockerson, #mock{mfa = Mfa} = Mock) ->
 %%% ----------------------------------------------------------------------------
 purge() ->
     AllMockInfo = get_all_mock_info(),
-    AllModules = [M || {{M, _F, _A}, _MockList} <- AllMockInfo],
-    [purge(Module) || Module <- AllModules],
+    AllMFA = [MFA || {MFA, _MockList} <- AllMockInfo],
+    [erase(MFA) || MFA <- AllMFA],
+    [purge(Module) || {Module, _F, _A}  <- AllMFA],
     ExtraMocks = [{M, F, A, length(MockList)} ||
                   {{M, F, A}, MockList} <- AllMockInfo, MockList /= []],
     case ExtraMocks of
@@ -147,6 +148,7 @@ get_all_mock_info() ->
 compile_and_load_mocker(AbstractCode) ->
     {ok, Module, Binary} = compile:forms(AbstractCode),
     purge(Module),
+    %% ?fp("loading ~p\n", [AbstractCode]),
     {module, Module} = load_module(Module, Binary).
 
 %%% ----------------------------------------------------------------------------
