@@ -28,8 +28,8 @@
 %%% external call to start application
 %%% ----------------------------------------------------------------------------
 start() ->
-    application:start(?SERVER).
-
+    catch application:start(eunit),
+    catch application:start(mockymockerson).
 
 %%% ----------------------------------------------------------------------------
 %%% application start callback
@@ -69,6 +69,7 @@ clear() ->
     end.
 
 %%% ----------------------------------------------------------------------------
+%%% mock a single call
 %%% ----------------------------------------------------------------------------
 mock(TestMod, Line, Module, Function, ArgRstList)
   when is_list(ArgRstList) andalso length(ArgRstList) > 0 ->
@@ -103,6 +104,7 @@ mock(_TestMod, _Line, _Module, _Function, Whatever) ->
     throw({bad_mocking_arg, Whatever}).
 
 %%% ----------------------------------------------------------------------------
+%%% mock in a batch
 %%% ----------------------------------------------------------------------------
 mock_n(0, _TestMod, _Line, _Module, _Function, _Whatever) ->
     ok;
@@ -111,37 +113,23 @@ mock_n(N, TestMod, Line, Module, Function, Whatever) ->
     mock_n(N-1, TestMod, Line, Module, Function, Whatever).
 
 %%% ----------------------------------------------------------------------------
+%%% mock a m:f/a call
 %%% ----------------------------------------------------------------------------
 mock(#mock{mfa = {Module, _F, _A}} = Mock) ->
     case code:which(Module) of
         non_existing ->
-            mock_help(Mock);
+            mockymockerson_sup:dispatch(Mock);
         _ ->
             throw("Can not mock loaded module")
     end.
 
 %%% ----------------------------------------------------------------------------
-%%% ----------------------------------------------------------------------------
-mock_help(Mock) ->
-    catch mocky:start(),
-    case gen_server:call(?SERVER, Mock) of
-        ok ->
-            ok;
-        {fault, Reason} ->
-            mocky:stop(),
-            throw(Reason)
-    end.
-
-%%% ----------------------------------------------------------------------------
+%%% This is the callback function provided to the fake modules
+%%% e.g. if there is a mod:func/0 mocked, the fake code actually looks
+%%%      like this mod:func() -> mockymockerson:call(mod, fun, [])
 %%% ----------------------------------------------------------------------------
 call(Module, Function, ArgList) ->
     MockCall = #mock_call{mfa = {Module, Function, length(ArgList)},
                           realArgs = ArgList},
-    %% mok_break:pause(MockCall),
-    case gen_server:call(?SERVER, MockCall) of
-        {?exception, Exception} ->
-            throw(Exception);
-        ReturnValue ->
-            ReturnValue
-    end.
+    mockymockerson_sup:dispatch(MockCall).
 

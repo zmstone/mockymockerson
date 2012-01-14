@@ -1,6 +1,6 @@
 
 %%%
-%%% mockerson works for mocky the server
+%%% mockerson the slave
 %%%
 
 -module(mockerson).

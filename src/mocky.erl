@@ -1,6 +1,6 @@
 
 %%%
-%%% mocky the server
+%%% mocky the worker 
 %%%
 
 -module(mocky).

@@ -8,6 +8,7 @@
 -export([
      start/1
     ,init/1
+    ,dispatch/1
 ]).
 
 -include("mockymockerson_private.hrl").
@@ -20,6 +21,7 @@
 start(_Args) ->
     {ok, Pid} = supervisor:start_link({local, ?MODULE}, ?MODULE, []),
     supervisor:start_child(?MODULE, []),
+    ?workers = ets:new(?workers, [named_table, public]),
     {ok, Pid}.
 
 %%% ----------------------------------------------------------------------------
@@ -34,4 +36,19 @@ init([]) ->
                 , [mocky, mockerson] },
 
     {ok, {{simple_one_for_one, 0, 1}, [MockySpec]}}.
+
+dispatch(#mock{} = Mock) ->
+    case gen_server:call(?SERVER, Mock) of
+        ok ->
+            ok;
+        {fault, Reason} ->
+            throw(Reason)
+    end;
+dispatch(#mock_call{} = MockCall) ->
+    case gen_server:call(?SERVER, MockCall) of
+        {?exception, Exception} ->
+            throw(Exception);
+        ReturnValue ->
+            ReturnValue
+    end.
 
