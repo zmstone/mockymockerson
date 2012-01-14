@@ -1,4 +1,8 @@
 
+%%%
+%%% mocky the server
+%%%
+
 -module(mocky).
 
 -behavior(gen_server).
@@ -7,8 +11,9 @@
      start/0
     ,purge/0
     ,stop/0
-        ]).
+]).
 
+%% gen_server callbacks
 -export([
     init/1,
     handle_call/3,
@@ -16,12 +21,11 @@
     handle_info/2,
     terminate/2,
     code_change/3
-        ]).
+]).
 
 -include("mockymockerson_private.hrl").
 
--record(mocky, {state     = mocking    %% mocking | checking | terminating
-                }).
+-record(state, {}).
 
 %%% ----------------------------------------------------------------------------
 %%% ----------------------------------------------------------------------------
@@ -42,17 +46,17 @@ purge() ->
 %%% ----------------------------------------------------------------------------
 init(_Args) ->
     process_flag(trap_exit, true),
-    {ok, #mocky{}}.
+    {ok, #state{}}.
 
 %%% ----------------------------------------------------------------------------
 %%% ----------------------------------------------------------------------------
-handle_cast(_Msg, Mocky) ->
-    {noreply, Mocky}.
+handle_cast(_Msg, State) ->
+    {noreply, State}.
 
 %%% ----------------------------------------------------------------------------
 %%% ----------------------------------------------------------------------------
-handle_info(_Info, Mocky) ->
-    {noreply, Mocky}.
+handle_info(_Info, State) ->
+    {noreply, State}.
 
 %%% ----------------------------------------------------------------------------
 %%% ----------------------------------------------------------------------------
@@ -61,30 +65,30 @@ terminate(_Reason, _State) ->
 
 %%% ----------------------------------------------------------------------------
 %%% ----------------------------------------------------------------------------
-code_change(_OldVsn, Mocky, _Extra) ->
-    {ok, Mocky}.
+code_change(_OldVsn, State, _Extra) ->
+    {ok, State}.
 
 %%% ----------------------------------------------------------------------------
 %%% ----------------------------------------------------------------------------
-handle_call(purge, _From, Mocky) ->
-    try {reply, mockerson:purge(), Mocky}
+handle_call(purge, _From, State) ->
+    try {reply, mockerson:purge(), State}
     catch
     throw:Exception ->
-        {reply, Exception, Mocky}
+        {reply, Exception, State}
     end;
-handle_call(stop, _From, Mocky) ->
-    {stop, normal, ok, Mocky};
-handle_call(#mock{} = Mock,  _From, Mocky) ->
+handle_call(stop, _From, State) ->
+    {stop, normal, ok, State};
+handle_call(#mock{} = Mock,  _From, State) ->
     case mockerson:mock(_Mockerson = void, Mock) of
         {ok, _NewMockerson} ->
-            {reply, ok, Mocky};
+            {reply, ok, State};
         {fault, Reason} ->
-            {reply, {fault, Reason}, Mocky}
+            {reply, {fault, Reason}, State}
     end;
-handle_call(#mock_call{} = MockCall, _From, Mocky) ->
-    try {reply, mockerson:call(MockCall), Mocky} 
+handle_call(#mock_call{} = MockCall, _From, State) ->
+    try {reply, mockerson:call(MockCall), State} 
     catch
     throw:Exception ->
-        {reply, Exception, Mocky}
+        {reply, Exception, State}
     end.
 

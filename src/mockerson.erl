@@ -1,4 +1,8 @@
 
+%%%
+%%% mockerson works for mocky the server
+%%%
+
 -module(mockerson).
 
 %% exports for mocky
@@ -6,7 +10,7 @@
      mock/2
     ,call/1
     ,purge/0
-        ]).
+]).
 
 -include("mockymockerson_private.hrl").
 
@@ -36,12 +40,6 @@ purge() ->
     _ ->
         throw(?excep({"Mocked function not called", ExtraMocks}))
     end.
-
-%%% ----------------------------------------------------------------------------
-%%% ----------------------------------------------------------------------------
-purge(Module) ->
-    code:purge(Module),
-    code:delete(Module).
 
 %%% ----------------------------------------------------------------------------
 %%% ----------------------------------------------------------------------------
@@ -150,4 +148,10 @@ compile_and_load_mocker(AbstractCode) ->
     {ok, Module, Binary} = compile:forms(AbstractCode),
     purge(Module),
     {module, Module} = load_module(Module, Binary).
+
+%%% ----------------------------------------------------------------------------
+%%% ----------------------------------------------------------------------------
+purge(Module) ->
+    code:purge(Module),
+    code:delete(Module).
 
