@@ -7,9 +7,7 @@
 
 %% external calls
 -export([
-     start/0
-    ,stop/0
-    ,setup/0
+     setup/0
     ,clear/0
     ,mock/5
     ,mock_n/6
@@ -19,29 +17,15 @@
 %% application callbacks
 -export([
      start/2
-    ,stop/1
 ]).
 
 -include("mockymockerson_private.hrl").
-
-%%% ----------------------------------------------------------------------------
-%%% external call to start application
-%%% ----------------------------------------------------------------------------
-start() ->
-    catch application:start(eunit),
-    catch application:start(?MODULE).
 
 %%% ----------------------------------------------------------------------------
 %%% application start callback
 %%% ----------------------------------------------------------------------------
 start(_Type, Args) ->
     mockymockerson_sup:start(Args).
-
-%%% ----------------------------------------------------------------------------
-%%% external call to stop application
-%%% ----------------------------------------------------------------------------
-stop() ->
-    application:stop(?MODULE).
 
 %%% ----------------------------------------------------------------------------
 %%% application stop callback
@@ -54,6 +38,7 @@ stop(_State) ->
 %%% setup the mocky-testing env
 %%% ----------------------------------------------------------------------------
 setup() ->
+    catch application:start(?MODULE),
     %% silent clean up
     catch clear(),
     ok.

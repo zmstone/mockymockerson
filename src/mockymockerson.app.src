@@ -4,7 +4,6 @@
  , {registered, []}
  , {applications, [ kernel
                   , stdlib
-                  , eunit
                   ]}
  , {mod, {mockymockerson, []}}
  ]}.
