@@ -167,6 +167,24 @@ mock_loaded_module_test() ->
     end.
 
 %%% ----------------------------------------------------------------------------
+%%% the order of mocking a function multiple times matters
+%%% ----------------------------------------------------------------------------
+order_matters_test() ->
+    mockymockerson:setup(),
+    ?mock(mod, func, {[matters2], matters2}),
+    ?mock(mod, func, {[matters1], matters1}),
+    try mod:func(matters1) of
+    _ ->
+        throw(failed)
+    catch
+    throw:{"Arg list mismatch", _} ->
+        ok
+    end,
+    matters2 = mod:func(matters2),
+    matters1 = mod:func(matters1),
+    mockymockerson:clear().
+
+%%% ----------------------------------------------------------------------------
 %%% run this case the last as to stop the application
 %%% ----------------------------------------------------------------------------
 stop_test() ->

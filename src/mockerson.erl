@@ -60,9 +60,13 @@ call(#call{mfa = Mfa, realArgs = RealArgs},
     case lists:member(Mfa, MfaList) of
     true ->
         {Mock, NewMockList} = take_first(Mfa, MockList, []),
-        {call_mocker(Mock, RealArgs),
-         State#mocker_state{used_list = [Mock | UsedList],
-                            mock_list = NewMockList}};
+        case call_mocker(Mock, RealArgs) of
+        {ok, Result} ->
+            {Result, State#mocker_state{used_list = [Mock | UsedList],
+                                        mock_list = NewMockList}};
+        Exception ->
+            throw(Exception)
+        end;
     false ->
         throw(?excep({"Mocker used up", Mfa}))
     end.
@@ -87,21 +91,22 @@ clear(#mocker_state{used_list = UsedList, mock_list = MockList} = State) ->
 %%% return the return value for the mocked function
 %%% ----------------------------------------------------------------------------
 call_mocker(#mock{mocker = Mocker}, RealArgs) when is_function(Mocker) ->
-    case catch apply(Mocker, RealArgs) of
-        {'EXIT', Reason} ->
-            throw(?excep({"Mocker function crashed", Reason}));
-        Result ->
-            Result
+    try apply(Mocker, RealArgs) of
+    Result ->
+        {ok, Result}
+    catch
+    E:R ->
+        ?excep({"Mocker function crashed", {E, R}})
     end;
 call_mocker(#mock{tester = Mod,
                   expArgs = ExpArgs,
                   line = Line} = Mock, RealArgs) when is_list(ExpArgs) ->
     FixedArgs = mockymockerson_ignore:fix(ExpArgs, RealArgs),
     case catch mockymockerson_match:run(Mod, Line, FixedArgs, RealArgs, []) of
-        ok ->
-            Mock#mock.result;
-        {_, MisMatchFormat} ->
-            throw(?excep({"Arg List mismatch", MisMatchFormat}))
+    ok ->
+        {ok, Mock#mock.result};
+    {_, MisMatchFormat} ->
+        ?excep({"Arg list mismatch", MisMatchFormat})
     end.
 
 %%% ----------------------------------------------------------------------------
