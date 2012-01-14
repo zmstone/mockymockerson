@@ -130,7 +130,7 @@ mock(#mock{mfa = {Module, F, A}} = Mock) ->
 %%%      like this mod:func() -> mockymockerson:call(mod, fun, [])
 %%% ----------------------------------------------------------------------------
 call(Module, Function, ArgList) ->
-    MockCall = #mock_call{mfa = {Module, Function, length(ArgList)},
-                          realArgs = ArgList},
+    MockCall = #call{mfa = {Module, Function, length(ArgList)},
+                     realArgs = ArgList},
     mockymockerson_sup:dispatch(MockCall).
 

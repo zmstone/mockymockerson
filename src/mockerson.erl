@@ -41,7 +41,7 @@ purge() ->
 
 %%% ----------------------------------------------------------------------------
 %%% ----------------------------------------------------------------------------
-call(#mock_call{mfa = Mfa, realArgs = RealArgs}) ->
+call(#call{mfa = Mfa, realArgs = RealArgs}) ->
     case get(Mfa) of
         [] ->
             throw(?excep({"Mocker used up", Mfa}));

@@ -18,7 +18,7 @@
     }).
 
 %% a call the to mocked module:function/arity
--record(mock_call, {
+-record(call, {
     mfa,
     realArgs
     }).

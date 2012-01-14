@@ -72,7 +72,7 @@ handle_call(#mock{} = Mock,  _From, State) ->
         {fault, Reason} ->
             {reply, {fault, Reason}, State}
     end;
-handle_call(#mock_call{} = MockCall, _From, State) ->
+handle_call(#call{} = MockCall, _From, State) ->
     try {reply, mockerson:call(MockCall), State} 
     catch
     throw:Exception ->
