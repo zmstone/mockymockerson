@@ -1,6 +1,6 @@
 
 %%%
-%%% mockerson the slave
+%%% mockerson do dirty jobs for mocker
 %%%
 
 -module(mockerson).
@@ -16,22 +16,6 @@
 
 -define(mocked_mod_entry, mockymockerson).
 -define(mocked_fun_entry, call).
-
-take_first(_Mfa, [], _Acc) ->
-    ?undef;
-take_first(Mfa, [Mock | Rest], Acc) ->
-    case Mock of
-    #mock{mfa = Mfa} ->
-        {Mock, lists:reverse(Acc) ++ Rest};
-    _ ->
-        take_first(Mfa, Rest, [Mock | Acc])
-    end.
-
-unique_mfa_list(#mocker_state{used_list = UsedList,
-                              mock_list = MockList}) ->
-    unique_mfa_list(UsedList ++ MockList);
-unique_mfa_list(MockList) ->
-    lists:usort([Mfa || #mock{mfa = Mfa} <- MockList]).
 
 %%% ----------------------------------------------------------------------------
 %%% add a new mock, fake a function and compile the module then re-load it
@@ -178,7 +162,6 @@ make_cons_arg_tuple([Arg | ArgList]) ->
 compile_and_load_mocker(AbstractCode) ->
     {ok, Module, Binary} = compile:forms(AbstractCode),
     purge(Module),
-    %% ?fp("loading ~p\n", [AbstractCode]),
     {module, Module} = load_module(Module, Binary).
 
 %%% ----------------------------------------------------------------------------
@@ -187,4 +170,26 @@ compile_and_load_mocker(AbstractCode) ->
 purge(Module) ->
     code:purge(Module),
     code:delete(Module).
+
+%%% ----------------------------------------------------------------------------
+%%% Take the first Mfa match from mock list and return the rest of the mockers
+%%% ----------------------------------------------------------------------------
+take_first(_Mfa, [], _Acc) ->
+    ?undef;
+take_first(Mfa, [Mock | Rest], Acc) ->
+    case Mock of
+    #mock{mfa = Mfa} ->
+        {Mock, lists:reverse(Acc) ++ Rest};
+    _ ->
+        take_first(Mfa, Rest, [Mock | Acc])
+    end.
+
+%%% ----------------------------------------------------------------------------
+%%% Get unique MFA list out of either mocker_state or a mock list
+%%% ----------------------------------------------------------------------------
+unique_mfa_list(#mocker_state{used_list = UsedList,
+                              mock_list = MockList}) ->
+    unique_mfa_list(UsedList ++ MockList);
+unique_mfa_list(MockList) ->
+    lists:usort([Mfa || #mock{mfa = Mfa} <- MockList]).
 
