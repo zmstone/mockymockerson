@@ -17,8 +17,8 @@
     expArgs                    %% expected arg list
     }).
 
-%% a call the to mocked module:function/arity
--record(call, {
+%% a call to the mocked module:function/arity
+-record(exec, {
     mfa,
     realArgs
     }).

@@ -11,7 +11,7 @@
     ,clear/0
     ,mock/5
     ,mock_n/6
-    ,call/3
+    ,exec/3
 ]).
 
 %% application callbacks
@@ -26,13 +26,6 @@
 %%% ----------------------------------------------------------------------------
 start(_Type, Args) ->
     mockymockerson_sup:start(Args).
-
-%%% ----------------------------------------------------------------------------
-%%% application stop callback
-%%% ----------------------------------------------------------------------------
-stop(_State) ->
-    %% io:format("mockymockerson stoped\n"),
-    ok.
 
 %%% ----------------------------------------------------------------------------
 %%% setup the mocky-testing env
@@ -112,10 +105,10 @@ mock(#mock{mfa = {Module, F, A}} = Mock) ->
 %%% ----------------------------------------------------------------------------
 %%% This is the callback function provided to the fake modules
 %%% e.g. if there is a mod:func/0 mocked, the fake code actually looks
-%%%      like this mod:func() -> mockymockerson:call(mod, fun, [])
+%%%      like this mod:func() -> mockymockerson:exec(mod, fun, [])
 %%% ----------------------------------------------------------------------------
-call(Module, Function, ArgList) ->
-    MockCall = #call{mfa = {Module, Function, length(ArgList)},
-                     realArgs = ArgList},
-    mockymockerson_sup:dispatch(MockCall).
+exec(Module, Function, ArgList) ->
+    Exec = #exec{mfa = {Module, Function, length(ArgList)},
+                 realArgs = ArgList},
+    mockymockerson_sup:dispatch(Exec).
 

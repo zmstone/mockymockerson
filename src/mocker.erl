@@ -77,8 +77,8 @@ handle_call(#mock{} = Mock,  _From, State) ->
     {fault, Reason} ->
         {reply, {fault, Reason}, State}
     end;
-handle_call(#call{} = MockCall, _From, State) ->
-    try mockerson:call(MockCall, State) of
+handle_call(#exec{} = Exec, _From, State) ->
+    try mockerson:exec(Exec, State) of
     {Result, NewState} ->
         {reply, Result, NewState}
     catch

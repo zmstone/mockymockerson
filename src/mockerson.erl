@@ -8,14 +8,14 @@
 %% exports for mocky
 -export([
      mock/2
-    ,call/2
+    ,exec/2
     ,clear/1
 ]).
 
 -include("mockymockerson_private.hrl").
 
 -define(mocked_mod_entry, mockymockerson).
--define(mocked_fun_entry, call).
+-define(mocked_fun_entry, exec).
 
 %%% ----------------------------------------------------------------------------
 %%% add a new mock, fake a function and compile the module then re-load it
@@ -38,7 +38,7 @@ mock(#mock{mfa = Mfa} = Mock,
 %%% Handle a call from the fake mocked function
 %%% return the return value for the mocked function
 %%% ----------------------------------------------------------------------------
-call(#call{mfa = Mfa, realArgs = RealArgs},
+exec(#exec{mfa = Mfa, realArgs = RealArgs},
      #mocker_state{used_list = UsedList, mock_list = MockList} = State) ->
     MfaList = unique_mfa_list(MockList),
     case lists:member(Mfa, MfaList) of

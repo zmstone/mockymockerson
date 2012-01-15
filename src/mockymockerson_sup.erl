@@ -51,9 +51,9 @@ dispatch(#mock{mfa = {M, _F, _A}} = Mock) ->
             Pid
         end,
     dispatch(Worker, Mock);
-dispatch(#call{mfa = {M, _F, _A}} = Call) ->
+dispatch(#exec{mfa = {M, _F, _A}} = Exec) ->
     [{M, Worker}] = ets:lookup(?mockers, M),
-    dispatch(Worker, Call).
+    dispatch(Worker, Exec).
 
 %%% ----------------------------------------------------------------------------
 %%% worker is identified, now dispatch it
@@ -65,8 +65,8 @@ dispatch(Worker, #mock{} = Mock) ->
         {fault, Reason} ->
             throw(Reason)
     end;
-dispatch(Worker, #call{} = MockCall) ->
-    case gen_server:call(Worker, MockCall) of
+dispatch(Worker, #exec{} = Exec) ->
+    case gen_server:call(Worker, Exec) of
         {?exception, Exception} ->
             throw(Exception);
         ReturnValue ->
