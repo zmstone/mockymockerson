@@ -1,8 +1,7 @@
-all: compile eunit
+all: compile ct
 
 compile:
 	./rebar compile
 
-eunit:
-	./rebar eunit
-
+ct:
+	./rebar ct

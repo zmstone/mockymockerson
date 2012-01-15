@@ -3,89 +3,141 @@
 
 -include("mockymockerson.hrl").
 
+%% CT hooks
 -export([
+     init_per_testcase/2
+    ,end_per_testcase/2
 ]).
+
+%% test cases
+-export(
+    [ all/0
+
+    , t_arity_result_normal/1
+    , t_arity_result_twice/1
+    , t_arity_result_3_times/1
+    , t_arity_result_too_many_invokes/1
+    , t_mock_two_different_modules/1
+
+    , t_args_result_normal/1
+    , t_args_result_batch/1
+
+    , t_mocking_fun_normal/1
+    , t_mocking_fun_undef/1
+
+    , t_extra_mocked_functions/1
+    , t_mock_mut_run/1
+    , t_mock_loaded_module/1
+    , t_order_matters/1
+    ]).
+
+%%% ----------------------------------------------------------------------------
+%%% CT hook
+%%% ----------------------------------------------------------------------------
+init_per_testcase(_Tc, Config) ->
+    mockymockerson:setup(),
+    Config.
+
+%%% ----------------------------------------------------------------------------
+%%% CT hook
+%%% ----------------------------------------------------------------------------
+end_per_testcase(_Tc, _Config) ->
+    mockymockerson:clear().
+
+%%% ----------------------------------------------------------------------------
+%%% All tests
+%%% ----------------------------------------------------------------------------
+all() ->
+    [ t_arity_result_normal
+    , t_arity_result_twice
+    , t_arity_result_3_times
+    , t_arity_result_too_many_invokes
+    , t_mock_two_different_modules
+    , t_args_result_normal
+    , t_args_result_batch
+    , t_mocking_fun_normal
+    , t_mocking_fun_undef
+    , t_extra_mocked_functions
+    , t_mock_mut_run
+    , t_mock_loaded_module
+    , t_order_matters
+    ].
 
 %%% ----------------------------------------------------------------------------
 %%% Mock mod:fun once
 %%% ----------------------------------------------------------------------------
-arity_result_normal_test() ->
-    mockymockerson:setup(),
-    ?mock(mymod, myfun, {2, ok}),
+t_arity_result_normal(Conf) when is_list(Conf) ->
     ?mock(mymod, myfun, {1, ok}),
-    ?match(ok, mymod:myfun(a,b)),
-    ?match(ok, mymod:myfun(whatever)),
-    mockymockerson:clear().
+    ?match(ok, mymod:myfun(whatever)).
 
 %%% ----------------------------------------------------------------------------
 %%% Mock mod:fun twice
 %%% ----------------------------------------------------------------------------
-arity_result_twice_test() ->
-    mockymockerson:setup(),
+t_arity_result_twice(Conf) when is_list(Conf) ->
     ?mock(mymod, myfun, {1, ok}),
     ?mock(mymod, myfun, {1, cool}),
     ok = mymod:myfun(whatever),
-    cool = mymod:myfun(whatsoever),
-    mockymockerson:clear().
+    cool = mymod:myfun(whatsoever).
 
 %%% ----------------------------------------------------------------------------
 %%% Mock mod:fun by a given list of {arity result}
 %%% ----------------------------------------------------------------------------
-arity_result_3_times_test() ->
-    mockymockerson:setup(),
+t_arity_result_3_times(Conf) when is_list(Conf) ->
     ?mock(mod, func, [{1, ok},
                       {1, cool},
                       {1, good}]),
     ok = mod:func(aaa),
     cool = mod:func(bbb),
-    good = mod:func(ccc),
-    mockymockerson:clear().
+    good = mod:func(ccc).
 
 %%% ----------------------------------------------------------------------------
 %%% mod:fun is invoked more times than it is mocked
 %%% ----------------------------------------------------------------------------
-arity_result_too_many_invokes_test() ->
-    mockymockerson:setup(),
+t_arity_result_too_many_invokes(Conf) when is_list(Conf) ->
     ?mock(mod, func, {1, ok}),
     ok = mod:func(a),
     case catch mod:func(a) of
         ok ->
-            exit({failed, t_arity_result_too_many_invokes});
+            throw(ailed);
         Exception ->
             ExceptionStr = lists:flatten(io_lib:format("~1000p", [Exception])),
             ?match(true, is_sub_str("Mocker used up", ExceptionStr))
-    end,
-    mockymockerson:clear().
+    end.
+
+%%% ----------------------------------------------------------------------------
+%%% mock two different modules
+%%% ----------------------------------------------------------------------------
+t_mock_two_different_modules(Conf) when is_list(Conf) ->
+    ?mock(mymod1, myfun, {0, ok}),
+    ?mock(mymod2, myfun, {1, ok}),
+    ok = mymod1:myfun(),
+    ok = mymod2:myfun(a).
+
 
 %%% ----------------------------------------------------------------------------
 %%% mock mod:fun one time in one line
 %%% ----------------------------------------------------------------------------
-args_result_normal_test() ->
-    mockymockerson:setup(),
+t_args_result_normal(Conf) when is_list(Conf) ->
     ?mock(mymod, myfun, {['_whatever'], ok}),
     ?mock(mymod, myfun, {[must_match], cool}),
     ok = mymod:myfun(whatsoever),
-    cool = mymod:myfun(must_match),
-    mockymockerson:clear().
+    cool = mymod:myfun(must_match).
 
 %%% ----------------------------------------------------------------------------
 %%% mock mod:fun by given list of arg-list and result
 %%% ----------------------------------------------------------------------------
-args_result_batch_test() ->
-    mockymockerson:setup(),
+t_args_result_batch(Conf) when is_list(Conf) ->
     ?mock(mymod, myfun, [{[whatever], ok},
                          {[whatsoever], cool},
                          {['_'], {ok, "$don't match this one"}}]),
     ?match(ok, mymod:myfun(whatever)),
     ?match(cool, mymod:myfun(whatsoever)),
-    ?fixed_match({ok, '_no_match'}, mymod:myfun(crap)),
-    mockymockerson:clear().
+    ?fixed_match({ok, '_no_match'}, mymod:myfun(crap)).
 
 %%% ----------------------------------------------------------------------------
 %%% mock mod:fun by given function with specific number of calls
 %%% ----------------------------------------------------------------------------
-mocking_fun_normal_test() ->
-    mockymockerson:setup(),
+t_mocking_fun_normal(Conf) when is_list(Conf) ->
     Fun = fun(whatever) -> ok;
              (whatsoever) -> cool;
              (_) -> {ok, "$don't match this one"}
@@ -93,14 +145,12 @@ mocking_fun_normal_test() ->
     ?mock_n(3, mymod, myfun, Fun),
     ?match(ok, mymod:myfun(whatever)),
     ?match(cool, mymod:myfun(whatsoever)),
-    {ok, _} = mymod:myfun(crap),
-    mockymockerson:clear().
+    {ok, _} = mymod:myfun(crap).
 
 %%% ----------------------------------------------------------------------------
 %%% mock mod:fun/1 but no mod:fun/2
 %%% ----------------------------------------------------------------------------
-mocking_fun_undef_test() ->
-    mockymockerson:setup(),
+t_mocking_fun_undef(Conf) when is_list(Conf) ->
     Fun = fun(whatever) -> ok end,
     ?mock(mymod, myfun, Fun),
     ok = mymod:myfun(whatever),
@@ -110,25 +160,12 @@ mocking_fun_undef_test() ->
     catch
     error:undef ->
        ok
-    end,
-    mockymockerson:clear().
-
-%%% ----------------------------------------------------------------------------
-%%% mock two different modules
-%%% ----------------------------------------------------------------------------
-mocking_error_loaded_module_test() ->
-    mockymockerson:setup(),
-    ?mock(mymod1, myfun, {0, ok}),
-    ?mock(mymod2, myfun, {1, ok}),
-    ok = mymod1:myfun(),
-    ok = mymod2:myfun(a),
-    mockymockerson:clear().
+    end.
 
 %%% ----------------------------------------------------------------------------
 %%% mocked too many
 %%% ----------------------------------------------------------------------------
-extra_mocked_functions_test() ->
-    mockymockerson:setup(),
+t_extra_mocked_functions(Conf) when is_list(Conf) ->
     ?mock(mymod, myfun, {0, ok}),
     try mockymockerson:clear() of
     _Result ->
@@ -142,16 +179,14 @@ extra_mocked_functions_test() ->
 %%% ----------------------------------------------------------------------------
 %%% Test mut:run/0
 %%% ----------------------------------------------------------------------------
-mut_run_test() ->
-    mockymockerson:setup(),
+t_mock_mut_run(Conf) when is_list(Conf) ->
     ?mock(mymod, myfun, {[whatever], ok}),
-    ok = mut:run(),
-    mockymockerson:clear().
+    ok = mut:run().
 
 %%% ----------------------------------------------------------------------------
 %%% should not mock a loaded module, because it's supposed to be an test obj
 %%% ----------------------------------------------------------------------------
-mock_loaded_module_test() ->
+t_mock_loaded_module(Conf) when is_list(Conf) ->
     try ?mock(mut, run, {0, ok}) of
     _ ->
         throw(failed)
@@ -163,8 +198,7 @@ mock_loaded_module_test() ->
 %%% ----------------------------------------------------------------------------
 %%% the order of mocking a function multiple times matters
 %%% ----------------------------------------------------------------------------
-order_matters_test() ->
-    mockymockerson:setup(),
+t_order_matters(Conf) when is_list(Conf) ->
     ?mock(mod, func, {[matters2], matters2}),
     ?mock(mod, func, {[matters1], matters1}),
     try mod:func(matters1) of
@@ -175,8 +209,7 @@ order_matters_test() ->
         ok
     end,
     matters2 = mod:func(matters2),
-    matters1 = mod:func(matters1),
-    mockymockerson:clear().
+    matters1 = mod:func(matters1).
 
 %%% ----------------------------------------------------------------------------
 %%% INTERNAL HELP FUNCTIONS
