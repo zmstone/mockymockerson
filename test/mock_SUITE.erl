@@ -1,13 +1,13 @@
 
 -module(mock_SUITE).
 
--include("mockymockerson.hrl").
-
 %% CT hooks
 -export([
      init_per_testcase/2
     ,end_per_testcase/2
 ]).
+
+-include("mockymockerson.hrl").
 
 %% test cases
 -export(
