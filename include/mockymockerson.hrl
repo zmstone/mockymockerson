@@ -20,7 +20,7 @@
 -ifdef(assertEqual).
 
 -undef(assertEqual).
--define(assertEqual(Expected, Expr), ?match(Expected, Expr)).
+-define(assertEqual(Expected, Expr), ?equal(Expected, Expr)).
 
 -endif.
 
