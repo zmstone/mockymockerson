@@ -61,6 +61,7 @@ t_match(Conf) when is_list(Conf) ->
 %%% Test match macro some more
 %%% ----------------------------------------------------------------------------
 t_match_more(Conf) when is_list(Conf) ->
+    ?assertMatch([a, b | _], [a, b, c, d]),
     X = "something",
     {mismatch, _} = (catch ?assertMatch(X, "somethingelse")),
     ok.

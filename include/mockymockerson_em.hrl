@@ -21,15 +21,11 @@
                     ok;
                 __Value ->
                     %% If there are Variables in Pattern, they'll be shadowed 
-                    try ets:fun2ms(fun({Pattern}) -> ok end) of
-                    [{{__MatchSpec}, [], [ok]}] ->
-                        __Fixed = mockymockerson_ignore:fix(__MatchSpec, __Value),
-                        ?equal(__Fixed, __Value)
-                    catch
-                    _:_ ->
-                        %% in case some stupid use of pattern
-                        throw({mismatch, Pattern = Value})
-                    end
+                    [{{__MatchSpec}, [], [ok]}] =
+                         ets:fun2ms(fun({Pattern}) -> ok end),
+                    __Fixed = mockymockerson_ignore:fix(__MatchSpec, __Value),
+                    %% let ?equal report the match details
+                    ?equal(__Fixed, __Value)
                 end
             end
          )()
