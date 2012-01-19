@@ -118,7 +118,7 @@ t_mock_two_different_modules(Conf) when is_list(Conf) ->
 %%% mock mod:fun one time in one line
 %%% ----------------------------------------------------------------------------
 t_args_result_normal(Conf) when is_list(Conf) ->
-    ?mock(mymod, myfun, {['_whatever'], ok}),
+    ?mock(mymod, myfun, {['_'], ok}),
     ?mock(mymod, myfun, {[must_match], cool}),
     ok = mymod:myfun(whatsoever),
     cool = mymod:myfun(must_match).
@@ -132,7 +132,7 @@ t_args_result_batch(Conf) when is_list(Conf) ->
                          {['_'], {ok, "$don't match this one"}}]),
     ?match(ok, mymod:myfun(whatever)),
     ?match(cool, mymod:myfun(whatsoever)),
-    ?fixed_match({ok, '_no_match'}, mymod:myfun(crap)).
+    ?match({ok, '_'}, mymod:myfun(crap)).
 
 %%% ----------------------------------------------------------------------------
 %%% mock mod:fun by given function with specific number of calls
