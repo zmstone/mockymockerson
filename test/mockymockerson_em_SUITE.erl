@@ -62,7 +62,18 @@ t_match(Conf) when is_list(Conf) ->
 %%% ----------------------------------------------------------------------------
 t_match_more(Conf) when is_list(Conf) ->
     ?assertMatch([a, b | _], [a, b, c, d]),
-    X = "something",
-    {mismatch, _} = (catch ?assertMatch(X, "somethingelse")),
+    X = something,
+    Line = ?LINE, Mismatch = (catch ?assertMatch(X, somethingelse)),
+    ExpectedMismatch = { mismatch
+                       , { ?MODULE 
+                         , Line
+                         , { details
+                           , value
+                           , mismatch
+                           , {something, somethingelse}
+                           }
+                         }
+                       },
+    ?assertEqual(ExpectedMismatch, Mismatch),
     ok.
 
