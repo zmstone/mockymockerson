@@ -1,5 +1,5 @@
 
--module(mockymockerson_parse_SUITE).
+-module(mockymockerson_em_SUITE).
 
 -export(
     [ all/0
