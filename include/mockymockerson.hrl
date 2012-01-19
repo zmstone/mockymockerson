@@ -18,10 +18,13 @@
         mockymockerson:mock_n(N, ?MODULE, ?LINE, Mod, Fun, Whatever)).
 
 -ifdef(assertEqual).
-
 -undef(assertEqual).
 -define(assertEqual(Expected, Expr), ?equal(Expected, Expr)).
+-endif.
 
+-ifdef(assertMatch).
+-undef(assertMatch).
+-define(assertMatch(Pattern, Expr), ?match(Pattern, Expr)).
 -endif.
 
 -endif.

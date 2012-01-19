@@ -20,17 +20,16 @@
                 Pattern ->
                     ok;
                 __Value ->
-                    __Expect =
-                        try ets:fun2ms(fun({Pattern}) -> ok end) of
-                        [{{__MatchSpec}, [], [ok]}] ->
-                            __MatchSpec
-                        catch
-                        _:_ ->
-                            %% in case some stupid use of pattern
-                            Pattern
-                        end,
-                    __Fixed = mockymockerson_ignore:fix(__Expect, __Value),
-                    ?equal(__Fixed, __Value)
+                    %% If there are Variables in Pattern, they'll be shadowed 
+                    try ets:fun2ms(fun({Pattern}) -> ok end) of
+                    [{{__MatchSpec}, [], [ok]}] ->
+                        __Fixed = mockymockerson_ignore:fix(__MatchSpec, __Value),
+                        ?equal(__Fixed, __Value)
+                    catch
+                    _:_ ->
+                        %% in case some stupid use of pattern
+                        throw({mismatch, Pattern = Value})
+                    end
                 end
             end
          )()
