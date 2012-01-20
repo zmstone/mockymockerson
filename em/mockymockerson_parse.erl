@@ -23,8 +23,8 @@ translate([F = {attribute, LINE, module, _Mod} | Rest], Acc, Records) ->
               [{attribute, LINE, export, [{?rec_fields, 1}]}, F | Acc],
               Records);
 
-translate([F = {attribute, _LINE, record, {Rec, _}} | Rest], Acc, Records) ->
-    translate(Rest, [F | Acc], [Rec | Records]);
+translate([F = {attribute, _L, record, {Rec, Fields}} | Rest], Acc, Records) ->
+    translate(Rest, [F | Acc], [{Rec, length(Fields)} | Records]);
 
 translate([F = {eof, LINE} | Rest], Acc, Records) ->
     translate(Rest, [F, make_rec_fields_function(Records, LINE) | Acc], []);
@@ -46,7 +46,7 @@ make_rec_fields_function(Records, L) ->
                     [{atom, L, fields}, {atom, L, Name}]
                 }
             ]
-         } || Name <- Records
+         } || {Name, _Size} <- Records
     ]
     ++
     [ {clause, L, [{var, L, '_'}], [], [{atom, L, undefined}]} ],
