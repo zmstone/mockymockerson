@@ -8,6 +8,17 @@
 
 rec_fields(a) -> record_info(fields, a); rec_fields(b) -> record_info(fields, b).
 
+tst() ->
+    fun(Value) ->
+        case Value of
+            #a{b=value}->
+                ok;
+            __Value ->
+                {'$MOCKYMOCKERSON_PARSE_ME', "#a{b=value}"}
+        end
+    end.
+%% {tuple,_,[{atom,_,'$MOCKYMOCKERSON_PARSE_ME'},{string,_,PatternStr}}
+
 %% the output of epp:parse_file("template.erl", [], [])
 %% {function,9,rec_fields,1,
 %%     [{clause,9,

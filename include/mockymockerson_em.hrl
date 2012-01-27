@@ -20,10 +20,9 @@
                 Pattern ->
                     ok;
                 __Value ->
-                    %% If there are Variables in Pattern, they'll be shadowed 
-                    [{{__MatchSpec}, [], [ok]}] =
-                         ets:fun2ms(fun({Pattern}) -> ok end),
-                    __Fixed = mockymockerson_ignore:fix(__MatchSpec, __Value),
+                    %% Pattern is parsed into Variable by mockymockerson_parse
+                    __Parsed = {'$MOCKYMOCKERSON_PARSE_ME', ??Pattern},
+                    __Fixed = mockymockerson_ignore:fix(__Parsed, __Value),
                     %% let ?equal report the match details
                     ?equal(__Fixed, __Value)
                 end

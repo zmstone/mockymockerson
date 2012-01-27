@@ -47,12 +47,12 @@ t_equal(Conf) when is_list(Conf) ->
 %%% Test match macro
 %%% ----------------------------------------------------------------------------
 t_match(Conf) when is_list(Conf) ->
-    ?assertMatch(_a, {a}),
-    ?assertMatch(_orb, [orb]),
-    ?assertMatch(_orwhatsoever, "orwahtsoever"),
+    ?assertMatch(_, {a}),
+    ?assertMatch(_, [orb]),
+    ?assertMatch(_, "orwahtsoever"),
     ?assertMatch(#a{}, #a{b = hasvalue}),
     {mismatch, _} = (catch ?assertMatch(#a{b = hsavalue}, #a{b = hasvalue})),
-    ?assertMatch(#a{b = _DummAssDoItLikeThis}, #a{b = hasvalue}),
+    ?assertMatch(#a{b = _}, #a{b = hasvalue}),
     {mismatch, _} = (catch ?assertMatch([#a{}, "something"],
                                         [#a{d = value}, "somethingelse"])),
     ok.

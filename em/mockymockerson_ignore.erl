@@ -31,6 +31,8 @@ fix_list('_', B) ->
     B;
 fix_list([], _) ->
     [];
+fix_list(A, []) ->
+    A;
 fix_list([H | T1], [H | T2]) ->
     [H | fix_list(T1, T2)];
 fix_list([H1 | T1], [H2 | T2]) ->
