@@ -6,7 +6,7 @@
     , t_record/1
     , t_equal/1
     , t_match/1
-    , t_match_more/1
+    , t_mismatch_details/1
     ]).
 
 -include("mockymockerson.hrl").
@@ -21,7 +21,7 @@ all() ->
     [ t_record
     , t_equal
     , t_match
-    , t_match_more
+    , t_mismatch_details
     ].
 
 %%% ----------------------------------------------------------------------------
@@ -51,6 +51,8 @@ t_match(Conf) when is_list(Conf) ->
     ?assertMatch(_, [orb]),
     ?assertMatch(_, "orwahtsoever"),
     ?assertMatch(#a{}, #a{b = hasvalue}),
+    ?assertMatch(#a{_='_'}, #a{b = hasvalue}),
+    ?assertMatch(#a{_='_',_='_',_='_',_='_',_='_'}, #a{b = hasvalue}),
     {mismatch, _} = (catch ?assertMatch(#a{b = hsavalue}, #a{b = hasvalue})),
     ?assertMatch(#a{b = _}, #a{b = hasvalue}),
     {mismatch, _} = (catch ?assertMatch([#a{}, "something"],
@@ -60,7 +62,7 @@ t_match(Conf) when is_list(Conf) ->
 %%% ----------------------------------------------------------------------------
 %%% Test match macro some more
 %%% ----------------------------------------------------------------------------
-t_match_more(Conf) when is_list(Conf) ->
+t_mismatch_details(Conf) when is_list(Conf) ->
     ?assertMatch([a, b | _], [a, b, c, d]),
     X = something,
     Line = ?LINE, Mismatch = (catch ?assertMatch(X, somethingelse)),
