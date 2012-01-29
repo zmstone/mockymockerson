@@ -68,7 +68,7 @@ all() ->
 %%% ----------------------------------------------------------------------------
 t_arity_result_normal(Conf) when is_list(Conf) ->
     ?mock(mymod, myfun, {1, ok}),
-    ?match(ok, mymod:myfun(whatever)).
+    ?assertMatch(ok, mymod:myfun(whatever)).
 
 %%% ----------------------------------------------------------------------------
 %%% Mock mod:fun twice
@@ -101,7 +101,7 @@ t_arity_result_too_many_invokes(Conf) when is_list(Conf) ->
             throw(ailed);
         Exception ->
             ExceptionStr = lists:flatten(io_lib:format("~1000p", [Exception])),
-            ?match(true, is_sub_str("Mocker used up", ExceptionStr))
+            ?assertMatch(true, is_sub_str("Mocker used up", ExceptionStr))
     end.
 
 %%% ----------------------------------------------------------------------------
@@ -130,9 +130,9 @@ t_args_result_batch(Conf) when is_list(Conf) ->
     ?mock(mymod, myfun, [{[whatever], ok},
                          {[whatsoever], cool},
                          {['_'], {ok, "$don't match this one"}}]),
-    ?match(ok, mymod:myfun(whatever)),
-    ?match(cool, mymod:myfun(whatsoever)),
-    ?match({ok, '_'}, mymod:myfun(crap)).
+    ?assertMatch(ok, mymod:myfun(whatever)),
+    ?assertMatch(cool, mymod:myfun(whatsoever)),
+    ?assertMatch({ok, '_'}, mymod:myfun(crap)).
 
 %%% ----------------------------------------------------------------------------
 %%% mock mod:fun by given function with specific number of calls
@@ -143,8 +143,8 @@ t_mocking_fun_normal(Conf) when is_list(Conf) ->
              (_) -> {ok, "$don't match this one"}
           end,
     ?mock_n(3, mymod, myfun, Fun),
-    ?match(ok, mymod:myfun(whatever)),
-    ?match(cool, mymod:myfun(whatsoever)),
+    ?assertMatch(ok, mymod:myfun(whatever)),
+    ?assertMatch(cool, mymod:myfun(whatsoever)),
     {ok, _} = mymod:myfun(crap).
 
 %%% ----------------------------------------------------------------------------

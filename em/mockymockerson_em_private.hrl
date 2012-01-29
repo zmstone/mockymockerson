@@ -1,8 +1,0 @@
-
--ifndef(MOCKYMOCKERSON_EM_PRIVATE_HRL_).
--define(MOCKYMOCKERSON_EM_PRIVATE_HRL_, true).
-
--define(rec_fields, '$MOCKYMOCKERSON_RECORD_FIELDS').
-
--endif.
-
