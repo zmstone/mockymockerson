@@ -14,17 +14,16 @@
 %% run(Module, Line, Exp, Got, Options) -> Format
 %%
 %% Options = [{print, raw | all | lite} | ...]
-%% Format  = {Tag, Type, Var}
-%% Type    = record | tuple | list | value | mismatch,
-%% Var     = {RecordName, Format} | -- when Type == record
-%%           Format               | -- when Type == tuple | list
-%%           Exp                  | -- when Type == value & Exp == Got
-%%           {Exp, Got}           | -- when Type == mismatch & Exp /= Got
+%% Format  = {Tag, Type, match | mismatch, Var}
+%% Type    = record | tuple | list | value
+%% Var     = Format               | -- when Type == record | tuple | list 
+%%           Exp                  | -- when Type == value andalso Exp == Got
+%%           {Exp, Got}           | -- when Type == value andalso Exp /= Got
 %% -----------------------------------------------------------------------------
 run(_Module, _Line, Value, Value, _Options) ->
     ok;
 run(Module, Line, ExpectedValue, RealValue, Options) ->
-    Format = format_match(Module, details, ExpectedValue, RealValue),
+    Format = format_match(Module, _RootTag = details, ExpectedValue, RealValue),
     Result = {Module, Line, Format},
     case [Opt || {print, Opt} <- Options] of
         [] ->

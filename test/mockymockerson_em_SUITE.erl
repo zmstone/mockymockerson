@@ -5,7 +5,10 @@
     [ all/0
     , t_record/1
     , t_equal/1
-    , t_match/1
+    , t_match_basic/1
+    , t_match_tuple/1
+    , t_match_list/1
+    , t_match_record/1
     , t_mismatch_details/1
     ]).
 
@@ -20,7 +23,10 @@
 all() ->
     [ t_record
     , t_equal
-    , t_match
+    , t_match_basic
+    , t_match_tuple
+    , t_match_list
+    , t_match_record
     , t_mismatch_details
     ].
 
@@ -44,19 +50,63 @@ t_equal(Conf) when is_list(Conf) ->
     ok.
 
 %%% ----------------------------------------------------------------------------
-%%% Test match macro
+%%% Test match macro, basic tests
 %%% ----------------------------------------------------------------------------
-t_match(Conf) when is_list(Conf) ->
-    ?assertMatch(_, {a}),
-    ?assertMatch(_, [orb]),
-    ?assertMatch(_, "orwahtsoever"),
+t_match_basic(Conf) when is_list(Conf) ->
+    ?assertMatch(_, b),
+    [{a, b}] = mismatch_details(catch ?assertMatch(a, b)),
+
+    ?assertMatch(_, "stirng"),
+    [{"a", "b"}] = mismatch_details(catch ?assertMatch("a", "b")),
+
+    ?assertMatch(_, {a, b}),
+    [{a, b}, {b, a}] = mismatch_details(catch ?assertMatch({a, b}, {b, a})),
+
+    ok.
+
+%%% ----------------------------------------------------------------------------
+%%% test match macro, tuples
+%%% ----------------------------------------------------------------------------
+t_match_tuple(Conf) when is_list(Conf) ->
+    ?assertMatch({}, {}),
+    [{{}, {a}}] = mismatch_details(catch ?assertMatch({}, {a})),
+    [{{a}, {}}] = mismatch_details(catch ?assertMatch({a}, {})),
+    [{{a, b}, {a}}] = mismatch_details(catch ?assertMatch({a, b}, {a})),
+
+    ?assertMatch({_}, {b}),
+    [{a, b}] = mismatch_details(catch ?assertMatch({a}, {b})),
+    ok.
+
+%%% ----------------------------------------------------------------------------
+%%% test match macro, lists
+%%% ----------------------------------------------------------------------------
+t_match_list(Conf) when is_list(Conf) ->
+    ?assertMatch([_], [a]),
+    ?assertMatch([_ | _], [a]),
+    [{['_'], []}] = mismatch_details(catch ?assertMatch([_, _ | _], [a])),
+    [{[], [b]}] = mismatch_details(catch ?assertMatch([a], [a, b])),
+    [{a, b}, {b, c}, {c, d}] =
+        mismatch_details(catch ?assertMatch([a, b, c], [b, c,d ])),
+    ok.
+
+%%% ----------------------------------------------------------------------------
+%%% test match macro, records
+%%% ----------------------------------------------------------------------------
+t_match_record(Conf) when is_list(Conf) ->
     ?assertMatch(#a{}, #a{b = hasvalue}),
     ?assertMatch(#a{_='_'}, #a{b = hasvalue}),
     ?assertMatch(#a{_='_',_='_',_='_',_='_',_='_'}, #a{b = hasvalue}),
-    {mismatch, _} = (catch ?assertMatch(#a{b = hsavalue}, #a{b = hasvalue})),
+    [{hsavalue, hasvalue}] = 
+        mismatch_details(catch ?assertMatch(#a{b = hsavalue}, #a{b = hasvalue})),
+    A = #a{b = b, c = c, d = d, e = e, f = f},
+    B = #b{c = c, d = d, e = e, f = f},
+    [{{a, b, c, d, e, f}, {b, c, d, e, f}}] = 
+        mismatch_details(catch ?assertMatch(A, B)),
+
     ?assertMatch(#a{b = _}, #a{b = hasvalue}),
-    {mismatch, _} = (catch ?assertMatch([#a{}, "something"],
-                                        [#a{d = value}, "somethingelse"])),
+    [{"something", "somethingelse"}] =
+        mismatch_details(catch ?assertMatch([#a{}, "something"],
+                                            [#a{d = value}, "somethingelse"])),
     ok.
 
 %%% ----------------------------------------------------------------------------
@@ -78,4 +128,20 @@ t_mismatch_details(Conf) when is_list(Conf) ->
                        },
     ?assertEqual(ExpectedMismatch, Mismatch),
     ok.
+
+%%% ----------------------------------------------------------------------------
+%%% get mismatch details
+%%% ----------------------------------------------------------------------------
+mismatch_details({mismatch, {?MODULE, _Line, Details}}) ->
+    mismatch_details([Details]);
+mismatch_details([{_, _Type, match, _} | Rest]) ->
+    mismatch_details(Rest);
+mismatch_details([{_, value, mismatch, {Exp, Got}} | Rest]) ->
+    [{Exp, Got} | mismatch_details(Rest)];
+mismatch_details([{_, record, mismatch, [_RecordName | SubDetails]} | Rest]) ->
+    mismatch_details(SubDetails) ++ mismatch_details(Rest);
+mismatch_details([{_, _Type, mismatch, SubDetails} | Rest]) ->
+    mismatch_details(SubDetails) ++ mismatch_details(Rest);
+mismatch_details([]) ->
+    [].
 
