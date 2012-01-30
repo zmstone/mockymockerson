@@ -1,4 +1,40 @@
 
-em: enhanced match - match into the specific list/tuple/record element till atomic
-src: mockymockerson - mock (aka stub) module:function/arity
+%% A simple mock (aka stub) module:function/arity impl.
+%% RESTRICTLY mock and then check stubs.
+%% Here "RESTRICTLY" means one stub per call.
+%% i.e. mock m:f/a N times if this function is called N times in the test case
+
+%% examples:
+
+%% call setup per case start
+init_per_testcase(_Tc, Config) ->
+    mockymockerson:setup(),
+    Config.
+
+%% call clear per case end
+end_per_testcase(_Tc, _Config) ->
+    mockymockerson:clear().
+
+%% by {m, f, {a, Result}} or {m, f, [{a, Result}]}
+t_arity_result_normal(Conf) when is_list(Conf) ->
+    ?mock(mymod, myfun, {1, ok}),
+    ?assertMatch(ok, mymod:myfun(whatever)).
+
+%% by {m, f, {Args, Result}} or {m, f, [{Args, Result}]}
+t_args_result_normal(Conf) when is_list(Conf) ->
+    ?mock(mymod, myfun, {['_'], ok}),
+    ?mock(mymod, myfun, {[must_match], cool}),
+    ok = mymod:myfun(whatsoever),
+    cool = mymod:myfun(must_match).
+
+%% by {m, f, fun()}
+t_mocking_fun_normal(Conf) when is_list(Conf) ->
+    Fun = fun(whatever) -> ok;
+             (whatsoever) -> cool;
+             (_) -> {ok, "$don't match this one"}
+          end,
+    ?mock_n(3, mymod, myfun, Fun),
+    ?assertMatch(ok, mymod:myfun(whatever)),
+    ?assertMatch(cool, mymod:myfun(whatsoever)),
+    {ok, _} = mymod:myfun(crap).
 
