@@ -187,13 +187,9 @@ t_mock_mut_run(Conf) when is_list(Conf) ->
 %%% should not mock a loaded module, because it's supposed to be an test obj
 %%% ----------------------------------------------------------------------------
 t_mock_loaded_module(Conf) when is_list(Conf) ->
-    try ?mock(mut, run, {0, ok}) of
-    _ ->
-        throw(failed)
-    catch
-    throw:Exception ->
-        ?assertEqual({"Can not mock loaded module", {mut, run, 0}}, Exception)
-    end.
+    ?mock(mut, run, {0, "my value"}),
+    "my value" = mut:run(),
+    ok.
 
 %%% ----------------------------------------------------------------------------
 %%% the order of mocking a function multiple times matters

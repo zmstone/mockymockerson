@@ -94,12 +94,14 @@ mock_n(N, TestMod, Line, Module, Function, Whatever) ->
 %%% ----------------------------------------------------------------------------
 %%% mock a m:f/a call
 %%% ----------------------------------------------------------------------------
-mock(#mock{mfa = {Module, F, A}} = Mock) ->
-    case code:which(Module) of
-        non_existing ->
+mock(#mock{mfa = {Module, _F, _A}} = Mock) ->
+    case code:is_loaded(Module) of
+        false ->
             mockymockerson_sup:dispatch(Mock);
-        _ ->
-            throw({"Can not mock loaded module", {Module, F, A}})
+        {file, _} ->
+            code:purge(Module),
+            code:delete(Module),
+            mock(Mock)
     end.
 
 %%% ----------------------------------------------------------------------------
