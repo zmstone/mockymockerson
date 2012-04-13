@@ -4,6 +4,7 @@
 
 -define(undef, undefined).
 
+-define(evaluate, '$MOCKYMOCKERSON_EVALUATE').
 -define(exception, '$MOCKYMOCKERSON_EXCEPTION').
 -define(excep(Detail), {?exception, Detail}).
 

@@ -75,13 +75,7 @@ clear(#mocker_state{used_list = UsedList, mock_list = MockList} = State) ->
 %%% return the return value for the mocked function
 %%% ----------------------------------------------------------------------------
 call_mocker(#mock{mocker = Mocker}, RealArgs) when is_function(Mocker) ->
-    try apply(Mocker, RealArgs) of
-    Result ->
-        {ok, Result}
-    catch
-    E:R ->
-        ?excep({"Mocker function crashed", {E, R}})
-    end;
+    {?evaluate, fun() -> apply(Mocker, RealArgs) end};
 call_mocker(#mock{tester = Mod,
                   expArgs = ExpArgs,
                   line = Line} = Mock, RealArgs) when is_list(ExpArgs) ->

@@ -69,6 +69,8 @@ dispatch(Worker, #exec{} = Exec) ->
     case gen_server:call(Worker, Exec) of
         {?exception, Exception} ->
             throw(Exception);
+        {?evaluate, Mocker} ->
+            Mocker();
         ReturnValue ->
             ReturnValue
     end.
