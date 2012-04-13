@@ -36,23 +36,30 @@ mock(#mock{mfa = Mfa} = Mock,
 
 %%% ----------------------------------------------------------------------------
 %%% Handle a call from the fake mocked function
-%%% return the return value for the mocked function
+%%% return the registered return value or the mock-fun to be evaluated
 %%% ----------------------------------------------------------------------------
 exec(#exec{mfa = Mfa, realArgs = RealArgs},
-     #mocker_state{used_list = UsedList, mock_list = MockList} = State) ->
+     #mocker_state{mock_list = MockList} = State) ->
     MfaList = unique_mfa_list(MockList),
     case lists:member(Mfa, MfaList) of
-    true ->
-        {Mock, NewMockList} = take_first(Mfa, MockList, []),
-        case call_mocker(Mock, RealArgs) of
+        true ->
+            do_exec(Mfa, RealArgs, State);
+        false ->
+            throw(?excep({"Mocker used up", Mfa}))
+    end.
+
+%%% ----------------------------------------------------------------------------
+%%% help function of exec
+%%% ----------------------------------------------------------------------------
+do_exec(Mfa, RealArgs, #mocker_state{used_list = UsedList,
+                                     mock_list = MockList} = State) ->
+    {Mock, NewMockList} = take_first(Mfa, MockList, []),
+    case call_mocker(Mock, RealArgs) of
         {ok, Result} ->
             {Result, State#mocker_state{used_list = [Mock | UsedList],
                                         mock_list = NewMockList}};
-        Exception ->
-            throw(Exception)
-        end;
-    false ->
-        throw(?excep({"Mocker used up", Mfa}))
+        {nok, Reason} ->
+            throw(?excep(Reason))
     end.
 
 %%% ----------------------------------------------------------------------------
@@ -75,16 +82,16 @@ clear(#mocker_state{used_list = UsedList, mock_list = MockList} = State) ->
 %%% return the return value for the mocked function
 %%% ----------------------------------------------------------------------------
 call_mocker(#mock{mocker = Mocker}, RealArgs) when is_function(Mocker) ->
-    {?evaluate, fun() -> apply(Mocker, RealArgs) end};
+    {ok, {?evaluate, fun() -> apply(Mocker, RealArgs) end}};
 call_mocker(#mock{tester = Mod,
                   expArgs = ExpArgs,
                   line = Line} = Mock, RealArgs) when is_list(ExpArgs) ->
     FixedArgs = mockymockerson_ignore:fix(ExpArgs, RealArgs),
     case catch mockymockerson_match:run(Mod, Line, FixedArgs, RealArgs, []) of
-    ok ->
-        {ok, Mock#mock.result};
-    {_, MisMatchFormat} ->
-        ?excep({"Arg list mismatch", MisMatchFormat})
+        ok ->
+            {ok, Mock#mock.result};
+        {_, MisMatchFormat} ->
+            {nok, {"Arg list mismatch", MisMatchFormat}}
     end.
 
 %%% ----------------------------------------------------------------------------
@@ -168,8 +175,6 @@ purge(Module) ->
 %%% ----------------------------------------------------------------------------
 %%% Take the first Mfa match from mock list and return the rest of the mockers
 %%% ----------------------------------------------------------------------------
-take_first(_Mfa, [], _Acc) ->
-    ?undef;
 take_first(Mfa, [Mock | Rest], Acc) ->
     case Mock of
     #mock{mfa = Mfa} ->
