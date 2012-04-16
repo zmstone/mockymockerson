@@ -86,8 +86,8 @@ call_mocker(#mock{mocker = Mocker}, RealArgs) when is_function(Mocker) ->
 call_mocker(#mock{tester = Mod,
                   expArgs = ExpArgs,
                   line = Line} = Mock, RealArgs) when is_list(ExpArgs) ->
-    FixedArgs = mockymockerson_ignore:fix(ExpArgs, RealArgs),
-    case catch mockymockerson_match:run(Mod, Line, FixedArgs, RealArgs, []) of
+    FixedArgs = erlymatch_ignore:fix(ExpArgs, RealArgs),
+    case catch erlymatch:run(Mod, Line, FixedArgs, RealArgs, []) of
         ok ->
             {ok, Mock#mock.result};
         {_, MisMatchFormat} ->
