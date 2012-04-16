@@ -1,4 +1,4 @@
-all: deps compile ct
+all: deps compile
 
 deps:
 	./rebar get-deps
